@@ -117,7 +117,20 @@ cor24-run --run forth.s -u 'inputs\n' --speed 0 -n 5000000 2>&1 | grep "^UART ou
 
 When adding threaded-code tests, add them to test_thread BEFORE the `do_quit` entry.
 
-**Run the full test suite with:** `./demo.sh test`
+**Run the full test suite with:** `reg-rs run -p tf24a --parallel`
+
+Regression tests use `reg-rs` (golden-output regression tool). Each test captures
+the full cor24-run output and compares against baseline. Tests are in `~/.local/reg-rs/`.
+
+To add a new test:
+```bash
+PP="grep -A 100 '^UART output:' || true"
+reg-rs create -t tf24a_TESTNAME -P "$PP" --timeout 30 \
+  -c "cor24-run --run forth.s -u 'INPUT\n' --speed 0 -n 5000000 2>&1" \
+  --desc "description"
+```
+
+Legacy bash tests: `./demo.sh test`
 
 **Stack leak tests are mandatory.** Every new word must be tested for stack balance:
 ```bash
