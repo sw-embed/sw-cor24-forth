@@ -1,4 +1,4 @@
-; forth.s — tf24a DTC Forth: Phases 1-3 (bootstrap, threading, dictionary)
+; forth.s — tf24a DTC Forth: Phases 1-4 (bootstrap, threading, dictionary, interpreter)
 ; COR24 DTC Forth kernel
 ;
 ; Register allocation (frozen):
@@ -38,7 +38,7 @@ _start:
     la r1, 983040       ; r1 = 0x0F0000 return stack base
 
     ; Initialize system variables (r0, r2 free before Phase 1)
-    la r2, entry_immediate
+    la r2, entry_quit
     la r0, var_latest_val
     sw r2, 0(r0)        ; LATEST = last dictionary entry
     la r2, dict_end
@@ -1015,13 +1015,37 @@ do_word:
     add r1, -3
     sw r2, 0(r1)        ; save IP. RS: [IP]
 
+    ; Check if previous call ended on newline
+    la r0, word_eol_flag
+    lbu r0, 0(r0)
+    ceq r0, z
+    brt word_no_eol
+    ; Clear flag and return empty
+    la r0, word_eol_flag
+    lc r2, 0
+    sb r2, 0(r0)
+    la r0, word_buffer
+    lc r2, 0
+    sb r2, 0(r0)
+    add r1, 3           ; pop IP wait... we haven't pushed buf_ptr yet
+    ; RS: [IP]. Push word_buffer, restore IP, NEXT
+    push r0
+    lw r2, 0(r1)
+    add r1, 3
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+word_no_eol:
+
     ; Init buffer pointer (past count byte)
     la r0, word_buffer
     add r0, 1
     add r1, -3
     sw r0, 0(r1)        ; RS: [buf_ptr, IP]
 
-    ; --- Skip leading spaces/control chars (char <= 32) ---
+    ; --- Skip leading spaces (NOT newlines) ---
+    ; Spaces (32) are skipped. Newline (10, 13) → return empty.
+    ; Any other char < 32 is skipped (control chars).
 word_skip:
     la r0, -65280        ; UART base
 word_skip_rx:
@@ -1032,13 +1056,35 @@ word_skip_rx:
     brt word_skip_rx2    ; not ready, retry
     la r0, -65280
     lbu r0, 0(r0)       ; r0 = char
+    ; Check for newline (10) → return empty
+    lcu r2, 10
+    ceq r0, r2
+    brt word_empty       ; newline → empty token
+    ; Check for CR (13) → return empty
+    lcu r2, 13
+    ceq r0, r2
+    brt word_empty
+    ; Skip spaces and other control chars
     lcu r2, 33
-    clu r0, r2           ; C = (char < 33) = space/ctrl
+    clu r0, r2           ; C = (char < 33)
     brt word_skip        ; skip, read another
     bra word_store       ; got a real char
 word_skip_rx2:
     la r0, -65280
     bra word_skip_rx
+
+word_empty:
+    ; Return empty counted string (length=0)
+    la r0, word_buffer
+    lc r2, 0
+    sb r2, 0(r0)        ; store count=0
+    add r1, 3           ; pop buf_ptr. RS: [IP]
+    push r0              ; push word_buffer address
+    lw r2, 0(r1)
+    add r1, 3
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
 
     ; --- Store char and read more ---
 word_store:
@@ -1067,6 +1113,23 @@ word_read_rx2:
     bra word_read_rx
 
 word_end:
+    ; r0 = delimiter char that ended the word
+    ; Check if delimiter is newline → set eol flag
+    push r0              ; save delimiter
+    lcu r2, 10
+    ceq r0, r2
+    brt word_set_eol
+    lcu r2, 13
+    ceq r0, r2
+    brt word_set_eol
+    bra word_no_set_eol
+word_set_eol:
+    la r0, word_eol_flag
+    lc r2, 1
+    sb r2, 0(r0)
+word_no_set_eol:
+    pop r0               ; discard delimiter
+
     ; Compute length = buf_ptr - (word_buffer + 1)
     lw r2, 0(r1)        ; r2 = final buf_ptr
     add r1, 3           ; pop buf_ptr. RS: [IP]
@@ -1373,6 +1436,552 @@ do_immediate:
     jmp (r0)
 
 ; ============================================================
+; Phase 4: LED!, DOT, interpret-only shell
+; ============================================================
+
+; ------------------------------------------------------------
+; LED! ( n -- ) : Write low bit of n to LED register at 0xFF0000
+; ------------------------------------------------------------
+entry_led_store:
+    .word entry_immediate
+    .byte 4
+    .byte 76, 69, 68, 33   ; "LED!"
+do_led_store:
+    add r1, -3
+    sw r2, 0(r1)        ; save IP
+    pop r0               ; n
+    lcu r2, 1
+    and r0, r2           ; mask to low bit
+    la r2, -65536        ; 0xFF0000 LED register
+    sb r0, 0(r2)
+    lw r2, 0(r1)
+    add r1, 3
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
+; DOT ( n -- ) : Print signed number in BASE, followed by space
+; Uses repeated subtraction for division.
+; ------------------------------------------------------------
+entry_dot:
+    .word entry_led_store
+    .byte 1
+    .byte 46              ; "."
+do_dot:
+    add r1, -3
+    sw r2, 0(r1)        ; save IP. RS: [IP]
+    pop r0               ; r0 = n
+
+    ; Check negative
+    cls r0, z            ; C = (n < 0)
+    brf dot_pos
+    ; Negate and emit '-'
+    add r1, -3
+    sw r0, 0(r1)        ; save n
+    lc r0, 45           ; '-'
+    push r0
+    la r2, -65280
+dot_neg_tx:
+    lb r0, 1(r2)
+    cls r0, z
+    brt dot_neg_tx
+    pop r0
+    sb r0, 0(r2)
+    lw r0, 0(r1)        ; restore n
+    add r1, 3
+    ; Negate: 0 - n
+    push r0
+    lc r0, 0
+    pop r2
+    sub r0, r2           ; r0 = -n
+
+dot_pos:
+    ; r0 = unsigned value to print
+    ; Push digit ASCII chars onto data stack in reverse, count on RS
+    lc r2, 0
+    add r1, -3
+    sw r2, 0(r1)        ; digit_count = 0. RS: [count, IP]
+
+dot_div_loop:
+    ; Divide r0 by BASE: quotient→r0, remainder→r2
+    ; Save value, load BASE
+    add r1, -3
+    sw r0, 0(r1)        ; RS: [val, count, IP]
+    la r0, var_base_val
+    lw r0, 0(r0)        ; r0 = BASE
+    lw r2, 0(r1)        ; r2 = value
+    add r1, 3           ; pop val. RS: [count, IP]
+
+    ; Divide: r2 / r0 → quotient in fp area, remainder in r0
+    ; Use repeated subtraction
+    add r1, -3
+    sw r0, 0(r1)        ; save BASE. RS: [BASE, count, IP]
+    lc r0, 0            ; quotient = 0, r2 = remainder
+
+dot_sub_loop:
+    push r0              ; save quotient on DS
+    mov r0, r2           ; r0 = remainder
+    lw r2, 0(r1)        ; r2 = BASE
+    clu r0, r2           ; C = (remainder < BASE)
+    brt dot_sub_done
+    sub r0, r2           ; remainder -= BASE
+    mov r2, r0           ; r2 = new remainder
+    pop r0               ; quotient
+    add r0, 1
+    bra dot_sub_loop
+
+dot_sub_done:
+    mov r2, r0           ; r2 = final remainder
+    pop r0               ; r0 = quotient
+    add r1, 3           ; pop BASE. RS: [count, IP]
+
+    ; Convert remainder (r2) to ASCII digit
+    push r0              ; save quotient on DS
+    mov r0, r2
+    lcu r2, 10
+    clu r0, r2           ; C = (digit < 10)
+    brt dot_digit_09
+    add r0, 55           ; 'A' - 10
+    bra dot_push_digit
+dot_digit_09:
+    add r0, 48           ; '0'
+
+dot_push_digit:
+    pop r2               ; r2 = quotient
+    push r0              ; push ASCII digit on DS
+    lw r0, 0(r1)        ; count
+    add r0, 1
+    sw r0, 0(r1)        ; count++
+
+    mov r0, r2           ; r0 = quotient
+    ceq r0, z            ; done when quotient = 0
+    brf dot_div_loop
+
+    ; Emit all digits (they're on DS in reverse = correct print order)
+dot_emit_loop:
+    lw r0, 0(r1)        ; count
+    ceq r0, z
+    brt dot_emit_done
+    la r2, -65280
+dot_emit_tx:
+    lb r0, 1(r2)
+    cls r0, z
+    brt dot_emit_tx
+    pop r0
+    sb r0, 0(r2)
+    lw r0, 0(r1)
+    add r0, -1
+    sw r0, 0(r1)
+    bra dot_emit_loop
+
+dot_emit_done:
+    add r1, 3           ; pop count. RS: [IP]
+    ; Emit trailing space
+    lc r0, 32
+    push r0
+    la r2, -65280
+dot_sp_tx:
+    lb r0, 1(r2)
+    cls r0, z
+    brt dot_sp_tx
+    pop r0
+    sb r0, 0(r2)
+    ; Restore IP and NEXT
+    lw r2, 0(r1)
+    add r1, 3
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
+; NUMBER ( c-addr -- n flag ) : Parse counted string as number
+; flag=0 success, flag=-1 failure. Handles leading '-'.
+; Pure assembly, no sub-calls. Uses RS for locals.
+; RS frame: [sign, acc, ptr, rem, saved_IP]
+; ------------------------------------------------------------
+entry_number:
+    .word entry_dot
+    .byte 6
+    .byte 78, 85, 77, 66, 69, 82
+do_number:
+    add r1, -3
+    sw r2, 0(r1)        ; RS: [IP]
+    pop r0               ; r0 = c-addr
+    lbu r2, 0(r0)       ; r2 = length
+    ceq r2, z
+    brf num_have_len
+    ; Zero length = failure
+    lc r0, 0
+    push r0
+    lc r0, -1
+    push r0
+    lw r2, 0(r1)
+    add r1, 3
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+num_have_len:
+    ; Build RS frame: [sign, acc, ptr, rem, IP]
+    ; Currently RS: [IP], r0=c-addr, r2=length
+    add r0, 1           ; r0 = first data char
+    add r1, -3
+    sw r2, 0(r1)        ; rem. RS: [rem, IP]
+    add r1, -3
+    sw r0, 0(r1)        ; ptr. RS: [ptr, rem, IP]
+    lc r0, 0
+    add r1, -3
+    sw r0, 0(r1)        ; acc=0. RS: [acc, ptr, rem, IP]
+
+    ; Check leading '-'
+    lw r0, 3(r1)        ; ptr
+    lbu r0, 0(r0)       ; first char
+    lcu r2, 45           ; '-'
+    ceq r0, r2
+    brf num_no_neg
+    ; Negative sign
+    lc r0, -1
+    add r1, -3
+    sw r0, 0(r1)        ; sign=-1. RS: [sign, acc, ptr, rem, IP]
+    lw r0, 6(r1)        ; ptr
+    add r0, 1
+    sw r0, 6(r1)        ; ptr++
+    lw r0, 9(r1)        ; rem
+    add r0, -1
+    sw r0, 9(r1)        ; rem--
+    ceq r0, z
+    brf num_digit_loop
+    ; Bare '-' = fail
+    la r0, num_fail
+    jmp (r0)
+
+num_no_neg:
+    lc r0, 1
+    add r1, -3
+    sw r0, 0(r1)        ; sign=1. RS: [sign, acc, ptr, rem, IP]
+
+num_digit_loop:
+    ; RS: [sign(0), acc(3), ptr(6), rem(9), IP(12)]
+    lw r0, 9(r1)        ; rem
+    ceq r0, z
+    brf num_not_done
+    la r0, num_done
+    jmp (r0)
+num_not_done:
+    lw r0, 6(r1)        ; ptr
+    lbu r0, 0(r0)       ; char
+
+    ; Convert ASCII to digit: '0'-'9' → 0-9
+    lcu r2, 48           ; '0'
+    clu r0, r2           ; C = (char < '0')
+    brf num_ge_0
+    la r0, num_fail
+    jmp (r0)
+num_ge_0:
+    lcu r2, 58           ; '9'+1
+    clu r0, r2           ; C = (char <= '9')
+    brt num_is_digit
+    ; Not 0-9, fail for now (no hex support)
+    la r0, num_fail
+    jmp (r0)
+
+num_is_digit:
+    lcu r2, 48
+    sub r0, r2           ; r0 = digit value (0-9)
+
+    ; acc = acc * BASE + digit
+    ; Multiply acc by BASE using repeated addition
+    ; Save digit
+    add r1, -3
+    sw r0, 0(r1)        ; RS: [digit, sign, acc, ptr, rem, IP]
+    ; acc is at offset 6, BASE from var
+    la r0, var_base_val
+    lw r0, 0(r0)        ; r0 = BASE
+    lw r2, 6(r1)        ; r2 = acc
+    ; result = 0, add acc BASE times
+    add r1, -3
+    sw r0, 0(r1)        ; save BASE counter. RS: [basectr, digit, sign, acc, ...]
+    lc r0, 0
+    add r1, -3
+    sw r0, 0(r1)        ; result=0. RS: [result, basectr, digit, sign, acc, ...]
+
+num_mul_loop:
+    lw r0, 3(r1)        ; basectr
+    ceq r0, z
+    brt num_mul_done
+    lw r0, 0(r1)        ; result
+    add r0, r2           ; result += acc
+    sw r0, 0(r1)
+    lw r0, 3(r1)        ; basectr
+    add r0, -1
+    sw r0, 3(r1)
+    bra num_mul_loop
+
+num_mul_done:
+    lw r0, 0(r1)        ; result = acc * BASE
+    lw r2, 6(r1)        ; digit
+    add r0, r2           ; new_acc = result + digit
+    add r1, 9           ; pop result, basectr, digit
+    ; RS: [sign, acc, ptr, rem, IP]
+    sw r0, 3(r1)        ; acc = new_acc
+
+    ; Advance ptr, decrement rem
+    lw r0, 6(r1)
+    add r0, 1
+    sw r0, 6(r1)
+    lw r0, 9(r1)
+    add r0, -1
+    sw r0, 9(r1)
+    la r0, num_digit_loop
+    jmp (r0)
+
+num_fail:
+    ; RS: [sign, acc, ptr, rem, IP]
+    lw r2, 12(r1)       ; IP
+    add r1, 15
+    lc r0, 0
+    push r0              ; n=0
+    lc r0, -1
+    push r0              ; flag=-1 (fail)
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+num_done:
+    ; RS: [sign(0), acc(3), ptr(6), rem(9), IP(12)]
+    lw r0, 3(r1)        ; acc
+    lw r2, 0(r1)        ; sign
+    cls r2, z            ; C = (sign < 0)
+    brf num_pos
+    ; Negate
+    push r0
+    lc r0, 0
+    pop r2
+    sub r0, r2           ; r0 = -acc
+num_pos:
+    lw r2, 12(r1)       ; IP
+    add r1, 15
+    push r0              ; n
+    lc r0, 0
+    push r0              ; flag=0 (success)
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
+; INTERPRET ( -- ) : Interpret-only text interpreter
+; Monolithic primitive. No compile mode.
+; Reads tokens with WORD, tries FIND then NUMBER.
+; Found → EXECUTE. Number → leave on stack. Else → print "? "
+;
+; Architecture: INTERPRET is a primitive that internally calls
+; WORD, FIND, NUMBER by directly jumping to their code entries.
+; Each sub-primitive returns via NEXT which follows IP.
+; INTERPRET chains them using small thread fragments.
+;
+; The key rule: at each "continuation point" (the handler primitive
+; that runs after WORD/FIND/NUMBER), RS contains exactly [caller_IP].
+; No nested continuations.
+; ------------------------------------------------------------
+entry_interpret:
+    .word entry_number
+    .byte 9
+    .byte 73, 78, 84, 69, 82, 80, 82, 69, 84
+
+do_interpret:
+    add r1, -3
+    sw r2, 0(r1)        ; RS: [caller_IP]
+    ; Start: call WORD
+    la r2, i_word_thread
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+i_word_thread:
+    .word do_word
+    .word do_i_after_word
+
+; After WORD: DS has [c-addr]. Check if empty.
+do_i_after_word:
+    ; IP points past this in i_word_thread — we ignore it.
+    ; RS: [caller_IP] (WORD saved/restored its own IP on RS)
+    pop r0               ; c-addr
+    lbu r2, 0(r0)       ; length
+    ceq r2, z
+    brf i_have_token
+    ; Empty token → end of input, return to caller
+    lw r2, 0(r1)
+    add r1, 3
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+i_have_token:
+    ; r0 = c-addr, push for FIND
+    push r0
+    la r2, i_find_thread
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+i_find_thread:
+    .word do_find
+    .word do_i_after_find
+
+; After FIND: DS has (c-addr 0) or (cfa flag)
+do_i_after_find:
+    ; RS: [caller_IP]
+    pop r0               ; flag (0=not found)
+    ceq r0, z
+    brt i_not_found
+    ; Found: DS has [cfa]. Execute it.
+    ; Set IP to continuation thread so after EXECUTE, we loop
+    la r2, i_continue
+    pop r0               ; cfa
+    jmp (r0)             ; execute it — NEXT will use IP=i_continue
+
+i_continue:
+    .word do_word
+    .word do_i_after_word
+
+i_not_found:
+    ; DS: [c-addr] (FIND returned it unchanged)
+    ; Try NUMBER. Dup for error reporting.
+    pop r0
+    push r0
+    push r0              ; DS: [c-addr, c-addr]
+    la r2, i_num_thread
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+i_num_thread:
+    .word do_number
+    .word do_i_after_number
+
+; After NUMBER: DS has [flag, n, c-addr]
+do_i_after_number:
+    ; RS: [caller_IP]
+    pop r0               ; flag (0=ok)
+    ceq r0, z
+    brt i_num_ok
+    ; Failed: print "? ", discard n and c-addr
+    pop r0               ; discard n
+    pop r0               ; discard c-addr
+    ; Print "? "
+    lc r0, 63
+    push r0
+    la r2, -65280
+i_err1:
+    lb r0, 1(r2)
+    cls r0, z
+    brt i_err1
+    pop r0
+    sb r0, 0(r2)
+    lc r0, 32
+    push r0
+i_err2:
+    lb r0, 1(r2)
+    cls r0, z
+    brt i_err2
+    pop r0
+    sb r0, 0(r2)
+    ; Continue loop
+    la r2, i_continue
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+i_num_ok:
+    ; DS: [n, c-addr]. Keep n, discard c-addr
+    pop r2               ; n
+    pop r0               ; discard c-addr
+    push r2              ; DS: [n]
+    ; Continue loop
+    la r2, i_continue
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
+; QUIT ( -- ) : Outer interpreter loop
+; Resets RS, calls INTERPRET, prints " ok\n", loops.
+; ------------------------------------------------------------
+entry_quit:
+    .word entry_interpret
+    .byte 4
+    .byte 81, 85, 73, 84
+
+do_quit:
+    la r1, 983040       ; reset RSP
+    la r2, quit_thread
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+quit_thread:
+    .word do_interpret
+    .word do_quit_ok
+    .word do_quit_restart
+
+do_quit_ok:
+    add r1, -3
+    sw r2, 0(r1)
+    la r0, var_state_val
+    lw r0, 0(r0)
+    ceq r0, z
+    brf quit_no_ok
+    ; Print " ok\n"
+    la r2, -65280
+    lc r0, 32
+    push r0
+quit_ok1:
+    lb r0, 1(r2)
+    cls r0, z
+    brt quit_ok1
+    pop r0
+    sb r0, 0(r2)
+    lc r0, 111
+    push r0
+quit_ok2:
+    lb r0, 1(r2)
+    cls r0, z
+    brt quit_ok2
+    pop r0
+    sb r0, 0(r2)
+    lc r0, 107
+    push r0
+quit_ok3:
+    lb r0, 1(r2)
+    cls r0, z
+    brt quit_ok3
+    pop r0
+    sb r0, 0(r2)
+    lc r0, 10
+    push r0
+quit_ok4:
+    lb r0, 1(r2)
+    cls r0, z
+    brt quit_ok4
+    pop r0
+    sb r0, 0(r2)
+quit_no_ok:
+    lw r2, 0(r1)
+    add r1, 3
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+do_quit_restart:
+    la r1, 983040
+    la r2, quit_thread
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ============================================================
 ; System Variable Storage
 ; ============================================================
 var_here_val:
@@ -1437,6 +2046,10 @@ cs_emit:
 cs_plus:
     .byte 1, 43                     ; "+"
 
+; EOL flag for WORD (1 byte)
+word_eol_flag:
+    .byte 0
+
 ; Word input buffer (32 bytes)
 word_buffer:
     .byte 0, 0, 0, 0, 0, 0, 0, 0
@@ -1483,7 +2096,18 @@ test_thread:
     .word do_fetch       ; read back from saved address → 10
     .word do_emit        ; emit 10 = '\n'
 
-    .word do_halt
+    ; --- Phase 4 Test A: DOT → prints "42 " ---
+    .word do_lit
+    .word 42
+    .word do_dot
+
+    ; --- Phase 4 Test B: LED! → turn on LED D2 ---
+    .word do_lit
+    .word 1
+    .word do_led_store
+
+    ; --- Enter interactive interpreter ---
+    .word do_quit
 
 ; ============================================================
 ; End of dictionary — HERE initialized to this address
