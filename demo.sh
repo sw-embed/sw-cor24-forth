@@ -27,8 +27,8 @@ case "${1:-demo}" in
       local raw result
       raw=$($RUN -u "$input" -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ')
       # Extract interpreter output: everything after "42 " (boot DOT test)
-      result=$(echo "$raw" | sed 's/.*42 //' | sed 's/Executed.*//' | sed 's/  */ /g' | sed 's/^ //;s/ $//')
-      expect=$(echo "$expect" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      result=$(echo "$raw" | sed-rs -e 's/.*42 //' -e 's/Executed.*//' -e 's/  */ /g' -e 's/^ //;s/ $//')
+      expect=$(echo "$expect" | sed-rs -e 's/^[[:space:]]*//;s/[[:space:]]*$//')
       if [ "$result" = "$expect" ]; then
         echo "  PASS: $desc"
         PASS=$((PASS + 1))
@@ -64,7 +64,7 @@ case "${1:-demo}" in
     check_led() {
       local desc="$1" input="$2" expect="$3"
       local led
-      led=$($RUN -u "$input" -n 5000000 --dump 2>&1 | grep "FF0000 LED" | sed 's/.*0x//' | cut -c1-2)
+      led=$($RUN -u "$input" -n 5000000 --dump 2>&1 | grep "FF0000 LED" | sed-rs -e 's/.*0x//' | cut -c1-2)
       if [ "$led" = "$expect" ]; then
         echo "  PASS: $desc"
         PASS=$((PASS + 1))
@@ -109,7 +109,7 @@ case "${1:-demo}" in
     check "unknown word"  'FOO\n'  '? ok'
 
     echo "--- WORDS ---"
-    local_words=$($RUN -u 'WORDS\n' -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed 's/.*42 //' | sed 's/Executed.*//')
+    local_words=$($RUN -u 'WORDS\n' -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed-rs -e 's/.*42 //' -e 's/Executed.*//')
     if echo "$local_words" | grep -q "EMIT" && echo "$local_words" | grep -q "DUP" && echo "$local_words" | grep -q "LED!"; then
       echo "  PASS: WORDS contains expected entries"
       PASS=$((PASS + 1))
@@ -131,7 +131,7 @@ case "${1:-demo}" in
       local input="$1"
       local display="${input//\\n/}"
       local output
-      output=$($RUN -u "$input" -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed 's/.*42 //' | sed 's/Executed.*//' | sed 's/  */ /g' | sed 's/^ //;s/ $//')
+      output=$($RUN -u "$input" -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed-rs -e 's/.*42 //' -e 's/Executed.*//' -e 's/  */ /g' -e 's/^ //;s/ $//')
       printf "  %-25s → %s\n" "$display" "$output"
     }
 
@@ -156,12 +156,12 @@ case "${1:-demo}" in
     echo "LED control:"
     led_on=$($RUN -u '1 LED!\n' -n 5000000 --dump 2>&1 | grep "FF0000 LED")
     led_off=$($RUN -u '0 LED!\n' -n 5000000 --dump 2>&1 | grep "FF0000 LED")
-    printf "  %-25s → %s\n" "1 LED!" "$(echo "$led_on" | sed 's/.*LED: */LED: /')"
-    printf "  %-25s → %s\n" "0 LED!" "$(echo "$led_off" | sed 's/.*LED: */LED: /')"
+    printf "  %-25s → %s\n" "1 LED!" "$(echo "$led_on" | sed-rs -e 's/.*LED: */LED: /')"
+    printf "  %-25s → %s\n" "0 LED!" "$(echo "$led_off" | sed-rs -e 's/.*LED: */LED: /')"
 
     echo ""
     echo "Dictionary:"
-    words=$($RUN -u 'WORDS\n' -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed 's/.*42 //' | sed 's/  ok.*//')
+    words=$($RUN -u 'WORDS\n' -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed-rs -e 's/.*42 //' -e 's/  ok.*//')
     echo "  WORDS → $words"
 
     echo ""
