@@ -1,1 +1,0 @@
-Phase 4: Added LED\! primitive, DOT (number printing), NUMBER (number parsing), and interpret-only QUIT/INTERPRET loop. All interactive tests pass: '1 .' prints '1 ok', '2 3 + .' prints '5 ok', '1 LED\!' turns on LED D2, '0 LED\!' turns it off, unknown words print '? ok'. INTERPRET is a monolithic primitive with clean RS discipline. WORD uses EOL flag for line-end detection.

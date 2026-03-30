@@ -1,1 +1,0 @@
-Added CR, SPACE, HEX, DECIMAL, DEPTH, .S, WORDS. Fixed NUMBER hex digit parsing (sub-48 was applied to hex digits). Fixed test_thread stack leak. Updated CLAUDE.md with ISA register capabilities and TDD requirement. Key insight: mov fp,sp + lw r0,0(fp) enables non-destructive stack inspection.

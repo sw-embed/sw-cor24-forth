@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# demo.sh — Run tf24a Forth demos
+# demo.sh — Run sw-cor24-forth Forth demos
 # Usage:
 #   ./demo.sh           Run automated demo (non-interactive)
 #   ./demo.sh repl      Start interactive REPL
@@ -11,14 +11,14 @@ RUN="cor24-run --run $FORTH --speed 0"
 
 case "${1:-demo}" in
   repl)
-    echo "=== tf24a Forth REPL ==="
+    echo "=== sw-cor24-forth REPL ==="
     echo "Type Forth commands. Ctrl-C to exit."
     echo ""
     cor24-run --run "$FORTH" --terminal --echo --speed 0
     ;;
 
   test)
-    echo "=== tf24a Test Suite ==="
+    echo "=== sw-cor24-forth Test Suite ==="
     PASS=0
     FAIL=0
 
@@ -124,7 +124,7 @@ case "${1:-demo}" in
     ;;
 
   demo)
-    echo "=== tf24a Forth Demo ==="
+    echo "=== sw-cor24-forth Forth Demo ==="
     echo ""
 
     run_line() {

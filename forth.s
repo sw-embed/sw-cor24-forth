@@ -1,4 +1,4 @@
-; forth.s — tf24a DTC Forth: Phases 1-4 (bootstrap, threading, dictionary, interpreter)
+; forth.s — sw-cor24-forth DTC Forth: Phases 1-4 (bootstrap, threading, dictionary, interpreter)
 ; COR24 DTC Forth kernel
 ;
 ; Register allocation (frozen):

@@ -1,1 +1,0 @@
-Added compile mode to INTERPRET (STATE-aware dispatch for words and numbers). Added * (multiply) primitive. Created 5 .fth example files demonstrating colon definitions, LED control, math, and ASCII art. All work: SQUARE→25, nested QUAD→12, compiled literals→3. 47 reg-rs + 41 demo.sh tests pass.
