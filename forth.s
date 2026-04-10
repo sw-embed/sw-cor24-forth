@@ -38,82 +38,12 @@ _start:
     la r1, 983040       ; r1 = 0x0F0000 return stack base
 
     ; Initialize system variables (r0, r2 free before Phase 1)
-    la r2, entry_bye
+    la r2, entry_until
     la r0, var_latest_val
     sw r2, 0(r0)        ; LATEST = last dictionary entry
     la r2, dict_end
     la r0, var_here_val
     sw r2, 0(r0)        ; HERE = first free byte
-
-    ; ============================================================
-    ; Phase 1: Inline Tests — print "OK\n*\n"
-    ; ============================================================
-
-    ; Test 1: Data stack + UART — print "OK\n"
-    lc r0, 10           ; '\n'
-    push r0
-    lc r0, 75           ; 'K'
-    push r0
-    lc r0, 79           ; 'O'
-    push r0
-
-    la r2, -65280       ; r2 = UART base (IP not needed yet)
-
-    ; Emit 'O'
-    pop r0
-    push r0
-tx1:
-    lb r0, 1(r2)
-    cls r0, z
-    brt tx1
-    pop r0
-    sb r0, 0(r2)
-
-    ; Emit 'K'
-    pop r0
-    push r0
-tx2:
-    lb r0, 1(r2)
-    cls r0, z
-    brt tx2
-    pop r0
-    sb r0, 0(r2)
-
-    ; Emit '\n'
-    pop r0
-    push r0
-tx3:
-    lb r0, 1(r2)
-    cls r0, z
-    brt tx3
-    pop r0
-    sb r0, 0(r2)
-
-    ; Test 2: Return stack — push 42, clear, pop, emit '*'
-    lc r0, 42
-    add r1, -3
-    sw r0, 0(r1)
-    lc r0, 0
-    lw r0, 0(r1)
-    add r1, 3
-
-    push r0
-tx4:
-    lb r0, 1(r2)
-    cls r0, z
-    brt tx4
-    pop r0
-    sb r0, 0(r2)
-
-    ; Emit '\n'
-    lc r0, 10
-    push r0
-tx5:
-    lb r0, 1(r2)
-    cls r0, z
-    brt tx5
-    pop r0
-    sb r0, 0(r2)
 
     ; ============================================================
     ; Launch threaded code tests (Phase 2 + Phase 3)
@@ -2657,10 +2587,111 @@ do_then:
     jmp (r0)
 
 ; ------------------------------------------------------------
+; ELSE ( -- ) : Else clause in conditional [IMMEDIATE]
+; Compile BRANCH + placeholder, patch IF's placeholder, push new placeholder.
+; ------------------------------------------------------------
+entry_else:
+    .word entry_then
+    .byte 0x84           ; length=4 + IMMEDIATE
+    .byte 69, 76, 83, 69 ; "ELSE"
+do_else:
+    add r1, -3
+    sw r2, 0(r1)        ; save IP. RS: [IP]
+    ; Compile do_branch at HERE
+    la r0, var_here_val
+    lw r2, 0(r0)        ; r2 = HERE
+    la r0, do_branch
+    sw r0, 0(r2)        ; mem[HERE] = do_branch
+    add r2, 3            ; HERE += 3
+    ; Compile placeholder (0) at HERE
+    add r1, -3
+    sw r2, 0(r1)        ; save else_patch addr on RS. RS: [else_patch, IP]
+    lc r0, 0
+    sw r0, 0(r2)        ; mem[HERE] = 0 (placeholder)
+    add r2, 3            ; HERE += 3
+    la r0, var_here_val
+    sw r2, 0(r0)        ; update HERE
+    ; Pop IF's patch_addr from DS, compute offset, patch it
+    pop r0               ; r0 = IF's patch_addr
+    la r2, var_here_val
+    lw r2, 0(r2)        ; r2 = HERE
+    sub r2, r0           ; r2 = offset = HERE - patch_addr
+    sw r2, 0(r0)        ; mem[patch_addr] = offset
+    ; Push ELSE's placeholder addr for THEN
+    lw r0, 0(r1)        ; else_patch addr
+    add r1, 3           ; pop. RS: [IP]
+    push r0              ; DS: [else_patch_addr]
+    lw r2, 0(r1)
+    add r1, 3
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
+; BEGIN ( -- ) : Loop start [IMMEDIATE]
+; Push current HERE onto data stack (no code compiled)
+; ------------------------------------------------------------
+entry_begin:
+    .word entry_else
+    .byte 0x85           ; length=5 + IMMEDIATE
+    .byte 66, 69, 71, 73, 78 ; "BEGIN"
+do_begin:
+    add r1, -3
+    sw r2, 0(r1)        ; save IP. RS: [IP]
+    la r0, var_here_val
+    lw r0, 0(r0)        ; r0 = HERE
+    push r0              ; DS: [begin_addr]
+    lw r2, 0(r1)
+    add r1, 3
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
+; UNTIL ( flag -- ) : Loop end, branch back if flag=0 [IMMEDIATE]
+; Compile 0BRANCH + backward offset to BEGIN
+; ------------------------------------------------------------
+entry_until:
+    .word entry_bye
+    .byte 0x85           ; length=5 + IMMEDIATE
+    .byte 85, 78, 84, 73, 76 ; "UNTIL"
+do_until:
+    add r1, -3
+    sw r2, 0(r1)        ; save IP. RS: [IP]
+    ; Compile do_zbranch at HERE
+    la r0, var_here_val
+    lw r2, 0(r0)        ; r2 = HERE
+    la r0, do_zbranch
+    sw r0, 0(r2)        ; mem[HERE] = do_zbranch
+    add r2, 3            ; HERE += 3
+    ; Compile placeholder (0) at HERE
+    add r1, -3
+    sw r2, 0(r1)        ; save placeholder addr on RS. RS: [patch, IP]
+    lc r0, 0
+    sw r0, 0(r2)        ; mem[HERE] = 0
+    add r2, 3            ; HERE += 3
+    la r0, var_here_val
+    sw r2, 0(r0)        ; update HERE
+    ; Pop begin_addr from DS, compute offset, patch
+    pop r0               ; r0 = begin_addr
+    lw r2, 0(r1)        ; r2 = placeholder addr
+    add r1, 3           ; pop. RS: [IP]
+    sub r0, r2           ; r0 = begin_addr - patch_addr = offset
+    sw r0, 0(r2)        ; mem[patch_addr] = offset
+    lw r2, 0(r1)
+    add r1, 3
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
 ; BYE ( -- ) : Halt the CPU
 ; ------------------------------------------------------------
 entry_bye:
-    .word entry_then
+    .word entry_begin
     .byte 3
     .byte 66, 89, 69        ; "BYE"
 do_bye:
@@ -2677,6 +2708,44 @@ var_state_val:
     .word 0
 var_base_val:
     .word 10
+
+; : VER ( -- ) : Print version banner
+ver_word_cfa:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_lit, 67       ; 'C'
+    .word do_emit
+    .word do_lit, 79       ; 'o'
+    .word do_emit
+    .word do_lit, 82       ; 'R'
+    .word do_emit
+    .word do_lit, 50       ; '2'
+    .word do_emit
+    .word do_lit, 52       ; '4'
+    .word do_emit
+    .word do_lit, 32       ; ' '
+    .word do_emit
+    .word do_lit, 70       ; 'F'
+    .word do_emit
+    .word do_lit, 111      ; 'o'
+    .word do_emit
+    .word do_lit, 114      ; 'r'
+    .word do_emit
+    .word do_lit, 116      ; 't'
+    .word do_emit
+    .word do_lit, 104      ; 'h'
+    .word do_emit
+    .word do_lit, 32       ; ' '
+    .word do_emit
+    .word do_lit, 118      ; 'v'
+    .word do_emit
+    .word do_lit, 48       ; '0'
+    .word do_emit
+    .word do_lit, 46       ; '.'
+    .word do_emit
+    .word do_cr
+    .word do_exit
 
 ; ============================================================
 ; Phase 2 Test Colon Definitions (using far CFA format)
@@ -2743,9 +2812,12 @@ word_buffer:
     .byte 0, 0, 0, 0, 0, 0, 0, 0
 
 ; ============================================================
-; Test Thread
+; Test Thread (used by 00-smoke.fth / demo.sh test only)
 ; ============================================================
 test_thread:
+    ; --- Print version banner ---
+    .word ver_word_cfa
+
     ; --- Phase 2 regression: prints "6\n*\n" ---
     .word main_word
     .word test_word_cfa
