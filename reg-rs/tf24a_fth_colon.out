@@ -1,0 +1,111 @@
+Assembled 3646 bytes
+Running (speed: max IPS, time limit: 10s)...
+
+[UART RX] ':'  (0x3A)
+[UART RX] ' '  (0x20)
+[UART RX] 'T'  (0x54)
+[UART RX] 'W'  (0x57)
+[UART RX] 'O'  (0x4F)
+[UART RX] ' '  (0x20)
+[UART RX] '2'  (0x32)
+[UART RX] ' '  (0x20)
+[UART RX] ';'  (0x3B)
+[UART RX] '\n'
+[UART TX @ 110000] ' '  (0x20)
+[UART TX @ 110000] 'o'  (0x6F)
+[UART TX @ 110000] 'k'  (0x6B)
+[UART TX @ 110000] '\n'
+[UART RX] ':'  (0x3A)
+[UART RX] ' '  (0x20)
+[UART RX] 'S'  (0x53)
+[UART RX] 'Q'  (0x51)
+[UART RX] 'U'  (0x55)
+[UART RX] 'A'  (0x41)
+[UART RX] 'R'  (0x52)
+[UART RX] 'E'  (0x45)
+[UART RX] ' '  (0x20)
+[UART RX] 'D'  (0x44)
+[UART RX] 'U'  (0x55)
+[UART RX] 'P'  (0x50)
+[UART RX] ' '  (0x20)
+[UART RX] '*'  (0x2A)
+[UART RX] ' '  (0x20)
+[UART RX] ';'  (0x3B)
+[UART RX] '\n'
+[UART TX @ 280000] ' '  (0x20)
+[UART TX @ 280000] 'o'  (0x6F)
+[UART TX @ 280000] 'k'  (0x6B)
+[UART TX @ 280000] '\n'
+[UART RX] ':'  (0x3A)
+[UART RX] ' '  (0x20)
+[UART RX] 'C'  (0x43)
+[UART RX] 'U'  (0x55)
+[UART RX] 'B'  (0x42)
+[UART RX] 'E'  (0x45)
+[UART RX] ' '  (0x20)
+[UART RX] 'D'  (0x44)
+[UART RX] 'U'  (0x55)
+[UART RX] 'P'  (0x50)
+[UART RX] ' '  (0x20)
+[UART RX] 'S'  (0x53)
+[UART RX] 'Q'  (0x51)
+[UART RX] 'U'  (0x55)
+[UART RX] 'A'  (0x41)
+[UART RX] 'R'  (0x52)
+[UART RX] 'E'  (0x45)
+[UART RX] ' '  (0x20)
+[UART RX] '*'  (0x2A)
+[UART RX] ' '  (0x20)
+[UART RX] ';'  (0x3B)
+[UART RX] '\n'
+[UART TX @ 500000] ' '  (0x20)
+[UART TX @ 500000] 'o'  (0x6F)
+[UART TX @ 500000] 'k'  (0x6B)
+[UART TX @ 500000] '\n'
+[UART RX] 'T'  (0x54)
+[UART RX] 'W'  (0x57)
+[UART RX] 'O'  (0x4F)
+[UART RX] ' '  (0x20)
+[UART RX] '.'  (0x2E)
+[UART RX] '\n'
+[UART TX @ 560000] '2'  (0x32)
+[UART TX @ 560000] ' '  (0x20)
+[UART TX @ 560000] ' '  (0x20)
+[UART TX @ 560000] 'o'  (0x6F)
+[UART TX @ 560000] 'k'  (0x6B)
+[UART TX @ 560000] '\n'
+[UART RX] '5'  (0x35)
+[UART RX] ' '  (0x20)
+[UART RX] 'S'  (0x53)
+[UART RX] 'Q'  (0x51)
+[UART RX] 'U'  (0x55)
+[UART RX] 'A'  (0x41)
+[UART RX] 'R'  (0x52)
+[UART RX] 'E'  (0x45)
+[UART RX] ' '  (0x20)
+[UART RX] '.'  (0x2E)
+[UART RX] '\n'
+[UART TX @ 670000] '2'  (0x32)
+[UART TX @ 670000] '5'  (0x35)
+[UART TX @ 670000] ' '  (0x20)
+[UART TX @ 670000] ' '  (0x20)
+[UART TX @ 670000] 'o'  (0x6F)
+[UART TX @ 670000] 'k'  (0x6B)
+[UART TX @ 670000] '\n'
+[UART RX] '3'  (0x33)
+[UART RX] ' '  (0x20)
+[UART RX] 'C'  (0x43)
+[UART RX] 'U'  (0x55)
+[UART RX] 'B'  (0x42)
+[UART RX] 'E'  (0x45)
+[UART RX] ' '  (0x20)
+[UART RX] '.'  (0x2E)
+
+UART output:  ok
+ ok
+ ok
+2  ok
+25  ok
+
+
+Executed 5000000 instructions

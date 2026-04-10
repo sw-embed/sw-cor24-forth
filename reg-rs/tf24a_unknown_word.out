@@ -1,0 +1,18 @@
+Assembled 3646 bytes
+Running (speed: max IPS, time limit: 10s)...
+
+[UART RX] 'F'  (0x46)
+[UART RX] 'O'  (0x4F)
+[UART RX] 'O'  (0x4F)
+[UART RX] '\n'
+[UART TX @ 50000] '?'  (0x3F)
+[UART TX @ 50000] ' '  (0x20)
+[UART TX @ 50000] ' '  (0x20)
+[UART TX @ 50000] 'o'  (0x6F)
+[UART TX @ 50000] 'k'  (0x6B)
+[UART TX @ 50000] '\n'
+
+UART output: ?  ok
+
+
+Executed 5000000 instructions

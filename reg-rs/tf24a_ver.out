@@ -1,0 +1,33 @@
+Assembled 3646 bytes
+Running (speed: max IPS, time limit: 10s)...
+
+[UART RX] 'V'  (0x56)
+[UART RX] 'E'  (0x45)
+[UART RX] 'R'  (0x52)
+[UART RX] '\n'
+[UART TX @ 50000] 'C'  (0x43)
+[UART TX @ 50000] 'O'  (0x4F)
+[UART TX @ 50000] 'R'  (0x52)
+[UART TX @ 50000] '2'  (0x32)
+[UART TX @ 50000] '4'  (0x34)
+[UART TX @ 50000] ' '  (0x20)
+[UART TX @ 50000] 'F'  (0x46)
+[UART TX @ 50000] 'o'  (0x6F)
+[UART TX @ 50000] 'r'  (0x72)
+[UART TX @ 50000] 't'  (0x74)
+[UART TX @ 50000] 'h'  (0x68)
+[UART TX @ 50000] ' '  (0x20)
+[UART TX @ 50000] 'v'  (0x76)
+[UART TX @ 50000] '0'  (0x30)
+[UART TX @ 50000] '.'  (0x2E)
+[UART TX @ 50000] '\n'
+[UART TX @ 50000] ' '  (0x20)
+[UART TX @ 50000] 'o'  (0x6F)
+[UART TX @ 50000] 'k'  (0x6B)
+[UART TX @ 50000] '\n'
+
+UART output: COR24 Forth v0.
+ ok
+
+
+Executed 5000000 instructions
