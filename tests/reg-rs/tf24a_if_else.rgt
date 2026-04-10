@@ -1,0 +1,5 @@
+command = '''cor24-run --run forth.s -u ': D -1 IF 65 EMIT ELSE 66 EMIT THEN ; : E 0 IF 65 EMIT ELSE 66 EMIT THEN ; D E\n' --speed 0 -n 10000000 2>&1'''
+timeout = 30
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "IF/ELSE/THEN true->A false->B"
