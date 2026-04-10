@@ -17,6 +17,6 @@
 \ fizzbuzz-style check
 : FIZZ? 3 MOD 0 = ;
 : BUZZ? 5 MOD 0 = ;
-15 FIZZ? .           \ expect 1 (true)
-15 BUZZ? .           \ expect 1 (true)
+15 FIZZ? .           \ expect -1 (true)
+15 BUZZ? .           \ expect -1 (true)
 7 FIZZ? .            \ expect 0 (false)

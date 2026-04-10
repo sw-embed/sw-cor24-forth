@@ -1,0 +1,3 @@
+: T -1 IF 65 EMIT THEN ;
+: F  0 IF 66 EMIT THEN ;
+T F
