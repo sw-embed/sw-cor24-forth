@@ -27,7 +27,7 @@ case "${1:-demo}" in
       local raw result
       raw=$($RUN -u "$input" -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ')
       # Extract interpreter output: everything after "42 " (boot DOT test)
-      result=$(echo "$raw" | sed-rs -e 's/.*42 //' -e 's/Executed.*//' -e 's/  */ /g' -e 's/^ //;s/ $//')
+      result=$(echo "$raw" | sed-rs -e 's/.*UART output: //' -e 's/Executed.*//' -e 's/  */ /g' -e 's/^ //;s/ $//')
       expect=$(echo "$expect" | sed-rs -e 's/^[[:space:]]*//;s/[[:space:]]*$//')
       if [ "$result" = "$expect" ]; then
         echo "  PASS: $desc"
@@ -66,7 +66,7 @@ case "${1:-demo}" in
     echo "--- Stack stability ---"
     check ".S repeated"     '1 2 3 .S\n.S\n.S\nDEPTH .\n'  '<3> 1 2 3 ok <3> 1 2 3 ok <3> 1 2 3 ok 3 ok'
     check "no REPL leak"    'DEPTH .\nDEPTH .\nDEPTH .\n'   '0 ok 0 ok 0 ok'
-    check "no WORDS leak"   'WORDS\nDEPTH .\n'     'UNTIL BYE BEGIN ELSE THEN IF \ ( WORDS .S DEPTH HEX DECIMAL SPACE CR QUIT INTERPRET NUMBER . LED! IMMEDIATE ; : CREATE WORD FIND ] [ ALLOT C, , BASE STATE LATEST HERE EXECUTE C! C@ ! @ R@ R> >R OVER SWAP DUP DROP 0= < = XOR OR AND /MOD - * + EXIT KEY EMIT ok 0 ok'
+    check "no WORDS leak"   'WORDS\nDEPTH .\n'     'VER BYE BEGIN ELSE THEN IF \ ( WORDS .S DEPTH HEX DECIMAL SPACE CR QUIT INTERPRET NUMBER . LED! IMMEDIATE ; : CREATE WORD FIND ] [ ALLOT C, , BASE STATE LATEST HERE EXECUTE C! C@ ! @ R@ R> >R OVER SWAP DUP DROP 0= < = XOR OR AND /MOD - * + EXIT KEY EMIT ok 0 ok'
 
     echo "--- Per-word stack balance ---"
     check "CR no leak"       'DEPTH .\nCR\nDEPTH .\n'       '0 ok ok 0 ok'
@@ -96,7 +96,7 @@ case "${1:-demo}" in
     check "unknown word"  'FOO\n'  '? ok'
 
     echo "--- WORDS ---"
-    local_words=$($RUN -u 'WORDS\n' -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed-rs -e 's/.*42 //' -e 's/Executed.*//')
+    local_words=$($RUN -u 'WORDS\n' -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed-rs -e 's/.*UART output: //' -e 's/Executed.*//')
     if echo "$local_words" | grep -q "EMIT" && echo "$local_words" | grep -q "DUP" && echo "$local_words" | grep -q "LED!"; then
       echo "  PASS: WORDS contains expected entries"
       PASS=$((PASS + 1))
@@ -118,7 +118,7 @@ case "${1:-demo}" in
       local input="$1"
       local display="${input//\\n/}"
       local output
-      output=$($RUN -u "$input" -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed-rs -e 's/.*42 //' -e 's/Executed.*//' -e 's/  */ /g' -e 's/^ //;s/ $//')
+      output=$($RUN -u "$input" -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed-rs -e 's/.*UART output: //' -e 's/Executed.*//' -e 's/  */ /g' -e 's/^ //;s/ $//')
       printf "  %-25s → %s\n" "$display" "$output"
     }
 
@@ -148,7 +148,7 @@ case "${1:-demo}" in
 
     echo ""
     echo "Dictionary:"
-    words=$($RUN -u 'WORDS\n' -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed-rs -e 's/.*42 //' -e 's/  ok.*//')
+    words=$($RUN -u 'WORDS\n' -n 5000000 2>&1 | grep "^UART output:" -A 20 | tr '\n' ' ' | sed-rs -e 's/.*UART output: //' -e 's/  ok.*//')
     echo "  WORDS → $words"
 
     echo ""

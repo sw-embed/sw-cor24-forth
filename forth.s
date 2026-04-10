@@ -38,7 +38,7 @@ _start:
     la r1, 983040       ; r1 = 0x0F0000 return stack base
 
     ; Initialize system variables (r0, r2 free before Phase 1)
-    la r2, entry_until
+    la r2, entry_ver
     la r0, var_latest_val
     sw r2, 0(r0)        ; LATEST = last dictionary entry
     la r2, dict_end
@@ -2709,7 +2709,10 @@ var_state_val:
 var_base_val:
     .word 10
 
-; : VER ( -- ) : Print version banner
+entry_ver:
+    .word entry_bye       ; link to previous word
+    .byte 3
+    .byte 86, 69, 82      ; "VER"
 ver_word_cfa:
     push r0
     la r0, do_docol_far
@@ -2812,59 +2815,7 @@ word_buffer:
     .byte 0, 0, 0, 0, 0, 0, 0, 0
 
 ; ============================================================
-; Test Thread (used by 00-smoke.fth / demo.sh test only)
-; ============================================================
 test_thread:
-    ; --- Print version banner ---
-    .word ver_word_cfa
-
-    ; --- Phase 2 regression: prints "6\n*\n" ---
-    .word main_word
-    .word test_word_cfa
-
-    ; --- Phase 3 Test A: FIND "EMIT" + EXECUTE → prints 'H' ---
-    .word do_lit
-    .word 72             ; 'H'
-    .word do_lit
-    .word cs_emit        ; address of counted string "EMIT"
-    .word do_find
-    .word do_drop        ; drop flag (-1)
-    .word do_execute     ; execute EMIT → prints 'H'
-
-    ; --- Phase 3 Test B: FIND "+" + EXECUTE → prints 'A' ---
-    .word do_lit
-    .word 40
-    .word do_lit
-    .word 25
-    .word do_lit
-    .word cs_plus        ; address of counted string "+"
-    .word do_find
-    .word do_drop        ; drop flag
-    .word do_execute     ; execute + → 40+25=65
-    .word do_emit        ; emit 65 = 'A'
-
-    ; --- Phase 3 Test C: COMMA → prints '\n' ---
-    .word do_here        ; push &var_here_val
-    .word do_fetch       ; get HERE value
-    .word do_dup         ; save a copy
-    .word do_lit
-    .word 10             ; newline
-    .word do_comma       ; store 10 at HERE, HERE += 3
-    .word do_fetch       ; read back from saved address → 10
-    .word do_emit        ; emit 10 = '\n'
-    .word do_drop        ; clean up extra HERE value
-
-    ; --- Phase 4 Test A: DOT → prints "42 " ---
-    .word do_lit
-    .word 42
-    .word do_dot
-
-    ; --- Phase 4 Test B: LED! → turn on LED D2 ---
-    .word do_lit
-    .word 1
-    .word do_led_store
-
-    ; --- Enter interactive interpreter ---
     .word do_quit
 
 ; ============================================================
