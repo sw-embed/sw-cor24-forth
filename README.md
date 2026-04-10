@@ -56,3 +56,17 @@ LED control, math, and more.
 
 - [sw-cor24-emulator](https://github.com/sw-embed/sw-cor24-emulator) — COR24 emulator + ISA
 - [sw-cor24-project](https://github.com/sw-embed/sw-cor24-project) — ecosystem hub
+
+## Links
+
+- Blog: [Software Wrighter Lab](https://software-wrighter-lab.github.io/)
+- Discord: [Join the community](https://discord.com/invite/Ctzk5uHggZ)
+- YouTube: [Software Wrighter](https://www.youtube.com/@SoftwareWrighter)
+
+## Copyright
+
+Copyright (c) 2026 Michael A. Wright
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for the full text.
