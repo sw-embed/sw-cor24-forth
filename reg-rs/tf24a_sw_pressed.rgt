@@ -1,0 +1,5 @@
+command = '''cor24-run --run forth.s -u 'SW? .\n' --speed 0 -n 5000000 --switch on 2>&1'''
+timeout = 30
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "SW? returns 0 when switch pressed"

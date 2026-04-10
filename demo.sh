@@ -66,7 +66,7 @@ case "${1:-demo}" in
     echo "--- Stack stability ---"
     check ".S repeated"     '1 2 3 .S\n.S\n.S\nDEPTH .\n'  '<3> 1 2 3 ok <3> 1 2 3 ok <3> 1 2 3 ok 3 ok'
     check "no REPL leak"    'DEPTH .\nDEPTH .\nDEPTH .\n'   '0 ok 0 ok 0 ok'
-    check "no WORDS leak"   'WORDS\nDEPTH .\n'     'VER UNTIL BYE BEGIN ELSE THEN IF \ ( WORDS .S DEPTH HEX DECIMAL SPACE CR QUIT INTERPRET NUMBER . LED! IMMEDIATE ; : CREATE WORD FIND ] [ ALLOT C, , BASE STATE LATEST HERE EXECUTE C! C@ ! @ R@ R> >R OVER SWAP DUP DROP 0= < = XOR OR AND /MOD - * + EXIT KEY EMIT ok 0 ok'
+    check "no WORDS leak"   'WORDS\nDEPTH .\n'     'VER UNTIL BYE BEGIN ELSE THEN IF \ ( WORDS .S DEPTH HEX DECIMAL SPACE CR QUIT INTERPRET NUMBER . SW? LED! IMMEDIATE ; : CREATE WORD FIND ] [ ALLOT C, , BASE STATE LATEST HERE EXECUTE C! C@ ! @ R@ R> >R OVER SWAP DUP DROP 0= < = XOR OR AND /MOD - * + EXIT KEY EMIT ok 0 ok'
 
     echo "--- Per-word stack balance ---"
     check "CR no leak"       'DEPTH .\nCR\nDEPTH .\n'       '0 ok ok 0 ok'
@@ -89,6 +89,8 @@ case "${1:-demo}" in
     check "@ !"              'HERE @ HERE @ = .\n'           '-1 ok'
     check "C@ C!"            'HERE @ 99 OVER C! C@ .\n'     '99 ok'
     check "LED! no leak"     '1 LED!\nDEPTH .\n'            'ok 0 ok'
+    check "SW? released"     'SW? .\n'                       '1 ok'
+    check "SW? no leak"      'DEPTH .\nSW? DROP\nDEPTH .\n' '0 ok ok 0 ok'
     check "NUMBER no leak"   '42\nDEPTH .\n'                'ok 1 ok'
     echo "  SKIP: BYE (halts CPU)"
 

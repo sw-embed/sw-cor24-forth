@@ -1446,11 +1446,34 @@ do_led_store:
     jmp (r0)
 
 ; ------------------------------------------------------------
+; SW? ( -- n ) : Read switch S2 (0=pressed, 1=released)
+; Reads bit 0 of 0xFF0000 (same pin as LED, active-low pull-up)
+; ------------------------------------------------------------
+entry_sw_fetch:
+    .word entry_led_store
+    .byte 3
+    .byte 83, 87, 63       ; "SW?"
+do_sw_fetch:
+    add r1, -3
+    sw r2, 0(r1)        ; save IP
+    la r0, -65536        ; 0xFF0000
+    lbu r0, 0(r0)       ; read byte
+    lcu r2, 1
+    and r0, r2           ; mask to bit 0
+    push r0
+    lw r2, 0(r1)
+    add r1, 3
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
 ; DOT ( n -- ) : Print signed number in BASE, followed by space
 ; Uses repeated subtraction for division.
 ; ------------------------------------------------------------
 entry_dot:
-    .word entry_led_store
+    .word entry_sw_fetch
     .byte 1
     .byte 46              ; "."
 do_dot:

@@ -1,4 +1,4 @@
-Assembled 3646 bytes
+Assembled 3676 bytes
 Running (speed: max IPS, time limit: 10s)...
 
 [UART RX] 'W'  (0x57)
@@ -103,6 +103,10 @@ Running (speed: max IPS, time limit: 10s)...
 [UART TX @ 70000] 'R'  (0x52)
 [UART TX @ 70000] ' '  (0x20)
 [UART TX @ 70000] '.'  (0x2E)
+[UART TX @ 70000] ' '  (0x20)
+[UART TX @ 70000] 'S'  (0x53)
+[UART TX @ 70000] 'W'  (0x57)
+[UART TX @ 70000] '?'  (0x3F)
 [UART TX @ 70000] ' '  (0x20)
 [UART TX @ 70000] 'L'  (0x4C)
 [UART TX @ 70000] 'E'  (0x45)
@@ -286,7 +290,7 @@ Running (speed: max IPS, time limit: 10s)...
 [UART TX @ 150000] 'k'  (0x6B)
 [UART TX @ 150000] '\n'
 
-UART output: VER UNTIL BYE BEGIN ELSE THEN IF \ ( WORDS .S DEPTH HEX DECIMAL SPACE CR QUIT INTERPRET NUMBER . LED! IMMEDIATE ; : CREATE WORD FIND ] [ ALLOT C, , BASE STATE LATEST HERE EXECUTE C! C@ ! @ R@ R> >R OVER SWAP DUP DROP 0= < = XOR OR AND /MOD - * + EXIT KEY EMIT  ok
+UART output: VER UNTIL BYE BEGIN ELSE THEN IF \ ( WORDS .S DEPTH HEX DECIMAL SPACE CR QUIT INTERPRET NUMBER . SW? LED! IMMEDIATE ; : CREATE WORD FIND ] [ ALLOT C, , BASE STATE LATEST HERE EXECUTE C! C@ ! @ R@ R> >R OVER SWAP DUP DROP 0= < = XOR OR AND /MOD - * + EXIT KEY EMIT  ok
 0  ok
 
 
