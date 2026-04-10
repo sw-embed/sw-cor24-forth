@@ -2710,7 +2710,7 @@ var_base_val:
     .word 10
 
 entry_ver:
-    .word entry_bye       ; link to previous word
+    .word entry_until       ; link to previous word
     .byte 3
     .byte 86, 69, 82      ; "VER"
 ver_word_cfa:

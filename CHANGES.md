@@ -1,5 +1,25 @@
 # Changelog
 
+## Fix: Dictionary Chain + Test Coverage (2026-04-10)
+
+### Fixed
+
+- Dictionary chain broken by `entry_ver` linking to `entry_begin` instead of
+  `entry_until`, causing UNTIL and BYE to be unreachable from FIND/WORDS.
+  Root cause: commit a4fa7c9 added VER to the dictionary but skipped two
+  entries in the link chain. Fix: changed entry_ver link to entry_until.
+- Demo scripts `demos/if-else.sh` and `demos/loop.sh` used `tail -n +5` to
+  skip boot messages that were removed by the silent startup change; updated
+  to `tail -n +3`.
+- `demo.sh` WORDS expected string was missing UNTIL.
+
+### Added
+
+- Regression tests: `tf24a_if_true`, `tf24a_if_false`, `tf24a_if_else`,
+  `tf24a_begin_until`, `tf24a_ver` (5 new reg-rs tests, 55 total).
+- `demo.sh` tests for IF true/false, IF/ELSE true/false, BEGIN/UNTIL, VER
+  (6 new checks, 45 total).
+
 ## Bug Fix: Comment Words (2026-04-10)
 
 ### Fixed
