@@ -76,11 +76,13 @@ can `SEE FIB`, `WORDS`, define new words interactively.
 - **Do we want to move `*` and `/MOD` to Forth?** They'd become
   repeated-addition / repeated-subtraction loops. Educational value:
   high. Runtime cost: significant (FIB uses `+ -` but not `*`; no
-  examples use heavy multiplication). Decision deferred past subset 10.
+  examples use heavy multiplication). **Deferred to `./forth-in-forthish/`**
+  (the next-phase project) — see `../../docs/future.md`.
 - **Should the final kernel keep asm `:` and `;`?** Moving them would
   require a Forth-level way to emit the 6-byte far-CFA template.
   Technically possible with `C,` and some `CREATE` tricks. Would save
-  another ~120 asm lines. Deferred as stretch.
+  another ~120 asm lines. **Deferred to `./forth-in-forthish/`** —
+  it's the centerpiece of that approach.
 - **Regression tests for each subset?** Current plan: rely on
   `examples/14-fib.fth` as the smoke test for every subset, plus ad
   hoc runs of examples that specifically exercise the moved words
@@ -107,4 +109,9 @@ can `SEE FIB`, `WORDS`, define new words interactively.
                       [10: WORDS VER SEE]
                                ↓
                          [11: REPL demo]
+                               ↓
+                  ──────────────────────────────────────
+                  Beyond `./forth-in-forth/` (separate dirs):
+                  - `./forth-in-forthish/`  approach 3 (minimal primitives)
+                  - `./forth-from-forth/`   approach 4 (cross-compiled kernel)
 ```

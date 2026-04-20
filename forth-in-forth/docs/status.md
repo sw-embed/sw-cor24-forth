@@ -110,12 +110,21 @@ Assembled binary went from 3879 → 2786 bytes (−1093 bytes, −28%).
 
 ## Next directions (not yet planned as subsets)
 
-- Move `*` and `/MOD` to Forth as repeated-add / repeated-subtract
-  loops. Saves ~50 more asm lines, costs significant runtime.
-- Move `:` and `;` to Forth. Requires a Forth-level way to emit the
-  6-byte far-CFA template via `C,`. Saves another ~120 lines but is
-  the trickiest move.
+Within `./forth-in-forth/`:
+
 - Refine `SEE` to peek at LIT operands and BRANCH offsets and label
   them (currently they print as bare decimal cells).
 - Re-baseline the existing reg-rs tests against `forth-in-forth/kernel.s`
   so the new kernel has the same regression coverage as `forth.s`.
+
+Beyond `./forth-in-forth/` (see `../../docs/future.md` for the full
+four-approach comparison and naming):
+
+- **`./forth-in-forthish/`** (approach 3): refactor the kernel down to
+  ~22 irreducible primitives, push `:` `;` `*` `/MOD` `WORD` `FIND`
+  `NUMBER` `INTERPRET` `QUIT` and the stack-ops into Forth. Net: kernel
+  shrinks to ~700 asm lines (~76% reduction from today).
+- **`./forth-from-forth/`** (approach 4): write a COR24 cross-compiler
+  in Forth and emit the kernel as a build artifact. Eliminates
+  hand-written asm entirely. Bootstrap uses today's `forth-in-forth`
+  to host the first run.

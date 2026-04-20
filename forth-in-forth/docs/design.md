@@ -127,5 +127,7 @@ On the subset-3 kernel: ~120M instructions suffice; `demo.sh` uses
 | 10     | `WORDS VER SEE`                | ~100                 | low  |
 
 Projected kernel after all subsets: ~2300 lines (down from ~3000).
-Stretch: push further by moving `*` and `/MOD` to Forth loops
-(saves ~50 more asm lines, costs more runtime).
+Further reductions (e.g. moving `*` and `/MOD` to Forth loops, or
+moving `:` and `;`) are deferred to `./forth-in-forthish/` — see
+`../../docs/future.md` for the full four-approach plan, including the
+fully cross-compiled `./forth-from-forth/` end state.

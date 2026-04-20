@@ -39,7 +39,9 @@ primitives that genuinely require machine code.
 - **Not a replacement for `forth.s`.** The existing kernel remains the
   canonical runtime used by the web frontend, existing demos, and
   regression tests. `forth-in-forth/` is an educational parallel
-  implementation.
+  implementation. Two further parallel implementations are scoped in
+  `../../docs/future.md`: `./forth-in-forthish/` (minimal primitives)
+  and `./forth-from-forth/` (cross-compiled kernel).
 - **No performance improvements.** Moving work from asm to threaded
   Forth is strictly slower. Instruction budgets for tests will grow.
 - **No ANS Forth compliance.** Only the subset the existing examples
@@ -48,7 +50,9 @@ primitives that genuinely require machine code.
 ## Success criteria
 
 - `forth-in-forth/kernel.s` is materially smaller than `forth.s`
-  (target: under 2100 lines; stretch: under 1500).
+  (target: under 2100 lines; stretch: under 1500). Further reductions
+  are deliberately deferred to `./forth-in-forthish/` and
+  `./forth-from-forth/`.
 - `forth-in-forth/demo.sh examples/14-fib.fth` produces
   `1 1 2 3 5 8 13 21 34 55 89` — matching `reg-rs/tf24a_fth_fib.out`.
 - Each of `examples/00–14.fth` runs under the new kernel and
