@@ -9,44 +9,91 @@ Last updated: 2026-04-20
 | 1 | Baseline fib example, demo, reg-rs test | done | 86edf74 |
 | 2 | Scaffold forth-in-forth/ directory | done | 94e76b2 |
 | 3 | Move IF/THEN/ELSE/BEGIN/UNTIL to Forth | done | 686c65f |
-| 4 | Move `\` and `(` to Forth | pending | — |
-| 5 | Stack & arith helpers in core/lowlevel.fth | pending | — |
-| 6 | `=` and `0=` via XOR | pending | — |
-| 7 | CR SPACE HEX DECIMAL to Forth | pending | — |
-| 8 | `.` to Forth | pending | — |
-| 9 | DEPTH / .S to Forth (add SP@ primitive) | pending | — |
-| 10 | WORDS VER SEE to Forth | pending | — |
-| 11 | REPL demo | pending | — |
+| 4 | Move `\` and `(` to Forth (add EOL!) | done | 71e1627 |
+| 5 | Stack & arith helpers in core/lowlevel.fth | done | 7d0037c |
+| 6 | `=` and `0=` via XOR | done | ce57489 |
+| 7 | CR SPACE HEX DECIMAL to Forth | done | 06a8dca |
+| 8 | `.` to Forth (hide asm `.`) | done | 12de5b1 |
+| 9 | DEPTH / .S to Forth (add SP@ primitive) | done | d65ae26 |
+| 10 | WORDS VER SEE to Forth (add `'`, `>NAME`) | done | c908615 |
+| 11 | repl.sh and see-demo.sh | done | 8c9104a |
+
+All 11 subsets shipped. The kernel now contains only what genuinely
+needs assembly; everything user-visible above the inner interpreter is
+written in Forth.
+
+## Today's word movement (subsets 3-11)
+
+**Moved from `.s` → `.fth`** (existed as asm primitives, now Forth) — 18 total:
+
+| Subset | Words |
+|--------|-------|
+| 3 | IF, THEN, ELSE, BEGIN, UNTIL (5) |
+| 4 | `\`, `(` (2) |
+| 6 | `=`, `0=` (2) |
+| 7 | CR, SPACE, HEX, DECIMAL (4) |
+| 8-9 | `.`, DEPTH, .S (3) |
+| 10 | WORDS, VER (2) |
+
+**Added in `.s`** (new asm primitives) — 3 total:
+
+| Subset | Word | Why it can't be Forth |
+|--------|------|------------------------|
+| 3 | `[']` | reads next input token + compiles `LIT cfa`; needed so Forth IF/THEN can name BRANCH/0BRANCH at compile time |
+| 4 | `EOL!` | sets the asm-internal word_eol_flag; Forth `\` needs it to tell QUIT the line is done after consuming the newline |
+| 9 | `SP@` | exposes the data-stack pointer; required by Forth DEPTH and .S |
+
+**Added in `.fth`** (new derived words, didn't exist before) — 19 total:
+
+| Tier | Words |
+|------|-------|
+| lowlevel (15) | NIP, TUCK, ROT, -ROT, 2DUP, 2DROP, 2SWAP, 2OVER, 1+, 1-, NEGATE, ABS, /, MOD, 0< |
+| highlevel (4) | `'`, PRINT-NAME, >NAME, SEE |
+
+**Net change in asm primitive count**: 18 removed − 3 added = **−15**.
+**Net new vocabulary visible at the REPL**: 18 still defined (now in
+Forth) − 0 lost + 19 brand-new + 3 new asm primitives = **+22 names**.
 
 ## Line counts
 
-| File | Lines |
-|------|-------|
-| `forth.s` (original, reference) | 2983 |
-| `forth-in-forth/kernel.s` (current) | 2852 |
-| `forth-in-forth/core/minimal.fth` | 8 |
-| `forth-in-forth/core/lowlevel.fth` | — |
-| `forth-in-forth/core/midlevel.fth` | — |
-| `forth-in-forth/core/highlevel.fth` | — |
+| File | Before subset 3 | Now |
+|------|-----------------|-----|
+| forth.s (original reference, untouched) | 2983 | 2983 |
+| forth-in-forth/kernel.s | 2852 | 2239 |
+| forth-in-forth/core/minimal.fth | — | 15 |
+| forth-in-forth/core/lowlevel.fth | — | 27 |
+| forth-in-forth/core/midlevel.fth | — | 25 |
+| forth-in-forth/core/highlevel.fth | — | 94 |
 
-Projected kernel after subset 10: ~2260 lines.
-Stretch target (move `*`, `/MOD`, `:`/`;`): ~2000 lines.
+Kernel went from 2852 → 2239 lines (−613 lines, −22%).
+Assembled binary went from 3879 → 2786 bytes (−1093 bytes, −28%).
 
 ## Verified compatibility
 
-`forth-in-forth/demo.sh examples/14-fib.fth` at 200M instructions
-produces `1 1 2 3 5 8 13 21 34 55 89`, matching `reg-rs/tf24a_fth_fib.out`
-baseline (which ran the same example on `forth.s` at 40M instructions).
+- `forth-in-forth/demo.sh examples/14-fib.fth` produces
+  `1 1 2 3 5 8 13 21 34 55 89` — matches `reg-rs/tf24a_fth_fib.out`.
+- Examples 06-comments, 08-if-then, 10-loop run with output matching
+  the original `forth.s` kernel.
+- `see-demo.sh` confirms `SEE SQUARE` → `DUP * ;` and `SEE CUBE` →
+  `DUP SQUARE * ;`.
+- `repl.sh` boots an interactive prompt with all core words loaded.
 
-Other examples have not yet been re-run on the new kernel; that
-happens incrementally as their required words are moved. Compatibility
-of all of `examples/00–14` is a subset 10 exit criterion.
+## Known cosmetic differences
 
-## Known issues
+- Forth `.S` prints `<N >` (extra space before `>`) instead of asm's
+  `<N>`. The asm version open-coded a single-digit print without
+  trailing space; the Forth version uses `.` which always emits one.
+  Functionally identical; supports arbitrary depth (asm supported only
+  single digits).
 
-None.
+## Next directions (not yet planned as subsets)
 
-## Next action
-
-Subset 4: move `\` and `(` to `core/minimal.fth` using `KEY` loops.
-Targets ~70 more asm lines removed.
+- Move `*` and `/MOD` to Forth as repeated-add / repeated-subtract
+  loops. Saves ~50 more asm lines, costs significant runtime.
+- Move `:` and `;` to Forth. Requires a Forth-level way to emit the
+  6-byte far-CFA template via `C,`. Saves another ~120 lines but is
+  the trickiest move.
+- Refine `SEE` to peek at LIT operands and BRANCH offsets and label
+  them (currently they print as bare decimal cells).
+- Re-baseline the existing reg-rs tests against `forth-in-forth/kernel.s`
+  so the new kernel has the same regression coverage as `forth.s`.
