@@ -20,8 +20,6 @@
 ;
 
 \ ---- ' (tick): runtime CFA lookup ----
-\ Reads the next input token, finds it, returns CFA. (FIND already
-\ pushes flag on top; DROP discards it. Assumes the word is found.)
 : '  WORD FIND DROP ;
 
 \ ---- PRINT-NAME: emit N chars from a name buffer + trailing space.
@@ -38,10 +36,10 @@
   LATEST @
   BEGIN
     DUP 0= IF DROP EXIT THEN
-    DUP 3 + C@                       \ ( entry flags_len )
+    DUP 3 + C@
     DUP 64 AND 0=
     IF
-      OVER 4 + SWAP 63 AND           \ ( entry name-addr namelen )
+      OVER 4 + SWAP 63 AND
       PRINT-NAME
     ELSE
       DROP
@@ -55,40 +53,77 @@
        70 EMIT 111 EMIT 114 EMIT 116 EMIT 104 EMIT 32 EMIT
        118 EMIT 48 EMIT 46 EMIT 10 EMIT ;
 
-\ ---- >NAME: reverse CFA lookup. Returns (name-addr namelen) or (0 0). ----
+\ ---- >NAME: reverse CFA lookup. Returns name-addr+namelen or 0 0. ----
 : >NAME ( cfa -- name-addr namelen )
   LATEST @
   BEGIN
     DUP 0= IF DROP DROP 0 0 EXIT THEN
-    DUP 3 + C@ 63 AND >R              \ ( cfa entry ) R: namelen
-    OVER OVER 4 + R@ + =              \ this_cfa = entry+4+namelen, compare
+    DUP 3 + C@ 63 AND >R
+    OVER OVER 4 + R@ + =
     IF
-      NIP 4 + R> EXIT                 \ match: name_addr = entry+4
+      NIP 4 + R> EXIT
     THEN
     R> DROP
     @
     0
   UNTIL ;
 
-\ ---- SEE: simple decompiler. Walks colon body, prints CFA names.
-\ Cells that don't match any dict entry (like LIT operands and BRANCH
-\ offsets) print as decimal numbers with trailing space.
-: SEE ( "name" -- )
-  ' DUP 0= IF DROP EXIT THEN
-  6 +                                  \ skip far-CFA template
+\ ---- SEE-CFA: decompile the body of a colon def given its CFA. ----
+\ Skips the 6-byte far-CFA template, then walks cells, printing each
+\ recognised CFA's name and unrecognised cells (LIT operands and
+\ BRANCH offsets) as decimal numbers. Stops on EXIT and prints `;`.
+: SEE-CFA ( cfa -- )
+  6 +
   BEGIN
-    DUP @                              ( ip cell )
+    DUP @
     DUP ['] EXIT = IF DROP DROP 59 EMIT 10 EMIT EXIT THEN
-    DUP >NAME                          ( ip cell name-addr namelen )
+    DUP >NAME
     DUP 0= IF
-      DROP DROP                        ( ip cell )
+      DROP DROP
       .
     ELSE
-      >R >R                            ( ip cell ) R: namelen, name-addr
-      DROP                             ( ip ) R: namelen, name-addr
-      R> R>                            ( ip name-addr namelen )
+      >R >R
+      DROP
+      R> R>
       PRINT-NAME
     THEN
     3 +
     0
+  UNTIL ;
+
+\ ---- SEE: decompile a named word. ----
+: SEE ( "name" -- )
+  ' DUP 0= IF DROP EXIT THEN
+  SEE-CFA ;
+
+\ ---- PRIM-MARKER: emit "[primitive] ;" then a newline. ----
+: PRIM-MARKER
+  91 EMIT 112 EMIT 114 EMIT 105 EMIT 109 EMIT
+  105 EMIT 116 EMIT 105 EMIT 118 EMIT 101 EMIT
+  93 EMIT 32 EMIT 59 EMIT 10 EMIT ;
+
+\ ---- DUMP-ALL: walk LATEST and decompile every non-HIDDEN entry. ----
+\ For each entry prints `: NAME body ;` on its own line. Primitives
+\ (whose CFA does not start with 0x7D, the `push r0` opcode of the
+\ far-CFA template) get `[primitive] ;` instead of a body.
+: DUMP-ALL ( -- )
+  LATEST @
+  BEGIN
+    DUP 0= IF DROP EXIT THEN
+    DUP 3 + C@
+    DUP 64 AND 0=
+    IF
+      58 EMIT 32 EMIT                          \ ": "
+      OVER 4 + OVER 63 AND PRINT-NAME          \ name + space
+      63 AND >R                                \ stash namelen
+      DUP 4 + R> +                             \ CFA = entry+4+namelen
+      DUP C@ 125 = IF
+        SEE-CFA
+      ELSE
+        DROP PRIM-MARKER
+      THEN
+    ELSE
+      DROP
+    THEN
+    @ 0
   UNTIL ;

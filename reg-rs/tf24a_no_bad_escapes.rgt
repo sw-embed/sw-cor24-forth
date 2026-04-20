@@ -1,0 +1,4 @@
+command = 'grep -nE "\\\\[nrt]|\\\\x[0-9a-fA-F]" forth-in-forth/core/*.fth examples/*.fth docs/*.4th 2>/dev/null; true'
+timeout = 10
+exit_code = 0
+desc = "Forth source must not contain literal escapes that cor24-run -u substitutes"
