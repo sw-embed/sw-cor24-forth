@@ -2194,78 +2194,15 @@ sue2:
 ; Phase 4b: Debugging and Convenience Words
 ; ============================================================
 
-; ------------------------------------------------------------
-; CR ( -- ) : Emit newline
-; ------------------------------------------------------------
-entry_cr:
-    .word entry_quit
-    .byte 2
-    .byte 67, 82            ; "CR"
-do_cr:
-    lc r0, 10
-    push r0
-    la r0, do_emit
-    jmp (r0)
-
-; ------------------------------------------------------------
-; SPACE ( -- ) : Emit space
-; ------------------------------------------------------------
-entry_space:
-    .word entry_cr
-    .byte 5
-    .byte 83, 80, 65, 67, 69 ; "SPACE"
-do_space:
-    lc r0, 32
-    push r0
-    la r0, do_emit
-    jmp (r0)
-
-; ------------------------------------------------------------
-; DECIMAL ( -- ) : Set BASE to 10
-; ------------------------------------------------------------
-entry_decimal:
-    .word entry_space
-    .byte 7
-    .byte 68, 69, 67, 73, 77, 65, 76 ; "DECIMAL"
-do_decimal:
-    add r1, -3
-    sw r2, 0(r1)
-    la r2, var_base_val
-    lc r0, 10
-    sw r0, 0(r2)
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; ------------------------------------------------------------
-; HEX ( -- ) : Set BASE to 16
-; ------------------------------------------------------------
-entry_hex:
-    .word entry_decimal
-    .byte 3
-    .byte 72, 69, 88        ; "HEX"
-do_hex:
-    add r1, -3
-    sw r2, 0(r1)
-    la r2, var_base_val
-    lc r0, 16
-    sw r0, 0(r2)
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
+; CR / SPACE / HEX / DECIMAL moved to core/midlevel.fth (each is one
+; line of Forth: EMIT 10 / EMIT 32 / 16 BASE ! / 10 BASE !).
 
 ; ------------------------------------------------------------
 ; DEPTH ( -- n ) : Push data stack depth
 ; Uses mov fp, sp to read sp. depth = (0xFEEC00 - sp) / 3.
 ; ------------------------------------------------------------
 entry_depth:
-    .word entry_hex
+    .word entry_quit
     .byte 5
     .byte 68, 69, 80, 84, 72 ; "DEPTH"
 do_depth:
@@ -2687,7 +2624,8 @@ ver_word_cfa:
     .word do_emit
     .word do_lit, 46       ; '.'
     .word do_emit
-    .word do_cr
+    .word do_lit, 10       ; '\n' (inlined CR now that asm CR is gone)
+    .word do_emit
     .word do_exit
 
 ; ============================================================
