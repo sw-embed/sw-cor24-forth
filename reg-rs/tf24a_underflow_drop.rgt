@@ -1,0 +1,5 @@
+command = '''cor24-run --run forth.s -u 'DROP\n42 .\n' --speed 0 -n 10000000 2>&1'''
+timeout = 30
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "DROP on empty stack caught by QUIT check"

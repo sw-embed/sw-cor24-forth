@@ -37,6 +37,13 @@
 _start:
     la r1, 983040       ; r1 = 0x0F0000 return stack base
 
+    ; Snapshot hardware-reset sp into var_sp_base for underflow checks
+    mov fp, sp
+    push fp
+    pop r0               ; r0 = initial sp (push/pop is net-zero on sp)
+    la r2, var_sp_base
+    sw r0, 0(r2)
+
     ; Initialize system variables (r0, r2 free before Phase 1)
     la r2, entry_ver
     la r0, var_latest_val
@@ -554,6 +561,15 @@ entry_store:
 do_store:
     add r1, -3
     sw r2, 0(r1)        ; save IP
+    ; underflow check: need 2 cells
+    mov fp, sp
+    push fp
+    pop r0
+    add r0, 6            ; r0 = sp + 6 (post-pop sp)
+    la r2, var_sp_base
+    lw r2, 0(r2)
+    clu r2, r0           ; C = (sp_base < sp+6) → underflow
+    brt do_store_uflw
     pop r2               ; addr
     pop r0               ; value
     sw r0, 0(r2)
@@ -562,6 +578,9 @@ do_store:
     ; NEXT
     lw r0, 0(r2)
     add r2, 3
+    jmp (r0)
+do_store_uflw:
+    la r0, stack_underflow_err
     jmp (r0)
 
 ; C@ ( addr -- c ) : Fetch byte from address
@@ -586,6 +605,15 @@ entry_cstore:
 do_cstore:
     add r1, -3
     sw r2, 0(r1)        ; save IP
+    ; underflow check: need 2 cells
+    mov fp, sp
+    push fp
+    pop r0
+    add r0, 6
+    la r2, var_sp_base
+    lw r2, 0(r2)
+    clu r2, r0
+    brt do_cstore_uflw
     pop r2               ; addr
     pop r0               ; byte value
     sb r0, 0(r2)
@@ -594,6 +622,9 @@ do_cstore:
     ; NEXT
     lw r0, 0(r2)
     add r2, 3
+    jmp (r0)
+do_cstore_uflw:
+    la r0, stack_underflow_err
     jmp (r0)
 
 ; ============================================================
@@ -615,7 +646,23 @@ entry_execute:
     .byte 7
     .byte 69, 88, 69, 67, 85, 84, 69
 do_execute:
+    add r1, -3
+    sw r2, 0(r1)        ; save IP temporarily for the underflow check
+    ; underflow check: need 1 cell
+    mov fp, sp
+    push fp
     pop r0
+    add r0, 3
+    la r2, var_sp_base
+    lw r2, 0(r2)
+    clu r2, r0
+    brt do_execute_uflw
+    lw r2, 0(r1)        ; restore IP (the executed word expects r2=IP)
+    add r1, 3
+    pop r0
+    jmp (r0)
+do_execute_uflw:
+    la r0, stack_underflow_err
     jmp (r0)
 
 ; ------------------------------------------------------------
@@ -688,6 +735,15 @@ entry_comma:
 do_comma:
     add r1, -3
     sw r2, 0(r1)        ; save IP
+    ; underflow check: need 1 cell
+    mov fp, sp
+    push fp
+    pop r0
+    add r0, 3
+    la r2, var_sp_base
+    lw r2, 0(r2)
+    clu r2, r0
+    brt do_comma_uflw
     la r0, var_here_val
     lw r2, 0(r0)        ; r2 = HERE
     pop r0               ; r0 = value
@@ -701,6 +757,9 @@ do_comma:
     lw r0, 0(r2)
     add r2, 3
     jmp (r0)
+do_comma_uflw:
+    la r0, stack_underflow_err
+    jmp (r0)
 
 ; ------------------------------------------------------------
 ; C, ( c -- ) : Store byte at HERE, advance HERE by 1
@@ -712,6 +771,15 @@ entry_ccomma:
 do_ccomma:
     add r1, -3
     sw r2, 0(r1)        ; save IP
+    ; underflow check: need 1 cell
+    mov fp, sp
+    push fp
+    pop r0
+    add r0, 3
+    la r2, var_sp_base
+    lw r2, 0(r2)
+    clu r2, r0
+    brt do_ccomma_uflw
     la r0, var_here_val
     lw r2, 0(r0)        ; r2 = HERE
     pop r0               ; r0 = byte
@@ -725,6 +793,9 @@ do_ccomma:
     lw r0, 0(r2)
     add r2, 3
     jmp (r0)
+do_ccomma_uflw:
+    la r0, stack_underflow_err
+    jmp (r0)
 
 ; ------------------------------------------------------------
 ; ALLOT ( n -- ) : Advance HERE by n bytes
@@ -736,6 +807,15 @@ entry_allot:
 do_allot:
     add r1, -3
     sw r2, 0(r1)        ; save IP
+    ; underflow check: need 1 cell
+    mov fp, sp
+    push fp
+    pop r0
+    add r0, 3
+    la r2, var_sp_base
+    lw r2, 0(r2)
+    clu r2, r0
+    brt do_allot_uflw
     la r0, var_here_val
     lw r2, 0(r0)        ; r2 = HERE
     pop r0               ; r0 = n
@@ -747,6 +827,9 @@ do_allot:
     ; NEXT
     lw r0, 0(r2)
     add r2, 3
+    jmp (r0)
+do_allot_uflw:
+    la r0, stack_underflow_err
     jmp (r0)
 
 ; ------------------------------------------------------------
@@ -2039,6 +2122,17 @@ quit_thread:
 do_quit_ok:
     add r1, -3
     sw r2, 0(r1)
+    ; Data stack underflow check: if sp > sp_base, stack went below empty
+    mov fp, sp
+    push fp
+    pop r0               ; r0 = current sp
+    la r2, var_sp_base
+    lw r2, 0(r2)         ; r2 = sp_base
+    clu r2, r0           ; C = (sp_base < sp) → underflow
+    brf qok_no_underflow
+    la r0, stack_underflow_err
+    jmp (r0)
+qok_no_underflow:
     la r0, var_state_val
     lw r0, 0(r0)
     ceq r0, z
@@ -2089,6 +2183,46 @@ do_quit_restart:
     la r2, quit_thread
     lw r0, 0(r2)
     add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
+; stack_underflow_err: shared handler for DS underflow.
+; Resets DS (sp = sp_base), RS, STATE; prints "? "; restarts QUIT.
+; Not a Forth word — jumped to from primitives and do_quit_ok.
+; ------------------------------------------------------------
+stack_underflow_err:
+    ; Reset DS
+    la r0, var_sp_base
+    lw r0, 0(r0)
+    push r0
+    pop fp               ; fp = sp_base
+    mov sp, fp           ; sp = sp_base
+    ; Reset RS
+    la r1, 983040
+    ; Reset STATE to interpret (0), so a partial colon def is abandoned
+    la r2, var_state_val
+    lc r0, 0
+    sw r0, 0(r2)
+    ; Print "? "
+    la r2, -65280
+    lc r0, 63            ; '?'
+    push r0
+sue1:
+    lb r0, 1(r2)
+    cls r0, z
+    brt sue1
+    pop r0
+    sb r0, 0(r2)
+    lc r0, 32            ; ' '
+    push r0
+sue2:
+    lb r0, 1(r2)
+    cls r0, z
+    brt sue2
+    pop r0
+    sb r0, 0(r2)
+    ; Restart outer loop
+    la r0, do_quit
     jmp (r0)
 
 ; ============================================================
@@ -2731,6 +2865,8 @@ var_state_val:
     .word 0
 var_base_val:
     .word 10
+var_sp_base:
+    .word 0             ; snapshot of initial sp taken at _start
 
 entry_ver:
     .word entry_until       ; link to previous word

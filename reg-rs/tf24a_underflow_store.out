@@ -1,0 +1,29 @@
+Assembled 3879 bytes
+Running (speed: max IPS, time limit: 10s)...
+
+[UART RX] '!'  (0x21) — halt signal
+[UART RX] '\n'
+[UART TX @ 30000] '?'  (0x3F)
+[UART TX @ 30000] ' '  (0x20)
+[UART TX @ 30000] ' '  (0x20)
+[UART TX @ 30000] 'o'  (0x6F)
+[UART TX @ 30000] 'k'  (0x6B)
+[UART TX @ 30000] '\n'
+[UART RX] '4'  (0x34)
+[UART RX] '2'  (0x32)
+[UART RX] ' '  (0x20)
+[UART RX] '.'  (0x2E)
+[UART RX] '\n'
+[UART TX @ 80000] '4'  (0x34)
+[UART TX @ 80000] '2'  (0x32)
+[UART TX @ 80000] ' '  (0x20)
+[UART TX @ 80000] ' '  (0x20)
+[UART TX @ 80000] 'o'  (0x6F)
+[UART TX @ 80000] 'k'  (0x6B)
+[UART TX @ 80000] '\n'
+
+UART output: ?  ok
+42  ok
+
+
+Executed 10000000 instructions
