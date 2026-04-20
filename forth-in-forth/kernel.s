@@ -1516,148 +1516,14 @@ do_sw_fetch:
     add r2, 3
     jmp (r0)
 
-; ------------------------------------------------------------
-; DOT ( n -- ) : Print signed number in BASE, followed by space
-; Uses repeated subtraction for division.
-; ------------------------------------------------------------
-entry_dot:
-    .word entry_sw_fetch
-    .byte 65              ; HIDDEN (bit 6) + length 1; Forth `.` in core/midlevel.fth
-    .byte 46              ; "."
-do_dot:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-    pop r0               ; r0 = n
-
-    ; Check negative
-    cls r0, z            ; C = (n < 0)
-    brf dot_pos
-    ; Negate and emit '-'
-    add r1, -3
-    sw r0, 0(r1)        ; save n
-    lc r0, 45           ; '-'
-    push r0
-    la r2, -65280
-dot_neg_tx:
-    lb r0, 1(r2)
-    cls r0, z
-    brt dot_neg_tx
-    pop r0
-    sb r0, 0(r2)
-    lw r0, 0(r1)        ; restore n
-    add r1, 3
-    ; Negate: 0 - n
-    push r0
-    lc r0, 0
-    pop r2
-    sub r0, r2           ; r0 = -n
-
-dot_pos:
-    ; r0 = unsigned value to print
-    ; Push digit ASCII chars onto data stack in reverse, count on RS
-    lc r2, 0
-    add r1, -3
-    sw r2, 0(r1)        ; digit_count = 0. RS: [count, IP]
-
-dot_div_loop:
-    ; Divide r0 by BASE: quotient→r0, remainder→r2
-    ; Save value, load BASE
-    add r1, -3
-    sw r0, 0(r1)        ; RS: [val, count, IP]
-    la r0, var_base_val
-    lw r0, 0(r0)        ; r0 = BASE
-    lw r2, 0(r1)        ; r2 = value
-    add r1, 3           ; pop val. RS: [count, IP]
-
-    ; Divide: r2 / r0 → quotient in fp area, remainder in r0
-    ; Use repeated subtraction
-    add r1, -3
-    sw r0, 0(r1)        ; save BASE. RS: [BASE, count, IP]
-    lc r0, 0            ; quotient = 0, r2 = remainder
-
-dot_sub_loop:
-    push r0              ; save quotient on DS
-    mov r0, r2           ; r0 = remainder
-    lw r2, 0(r1)        ; r2 = BASE
-    clu r0, r2           ; C = (remainder < BASE)
-    brt dot_sub_done
-    sub r0, r2           ; remainder -= BASE
-    mov r2, r0           ; r2 = new remainder
-    pop r0               ; quotient
-    add r0, 1
-    bra dot_sub_loop
-
-dot_sub_done:
-    mov r2, r0           ; r2 = final remainder
-    pop r0               ; r0 = quotient
-    add r1, 3           ; pop BASE. RS: [count, IP]
-
-    ; Convert remainder (r2) to ASCII digit
-    push r0              ; save quotient on DS
-    mov r0, r2
-    lcu r2, 10
-    clu r0, r2           ; C = (digit < 10)
-    brt dot_digit_09
-    add r0, 55           ; 'A' - 10
-    bra dot_push_digit
-dot_digit_09:
-    add r0, 48           ; '0'
-
-dot_push_digit:
-    pop r2               ; r2 = quotient
-    push r0              ; push ASCII digit on DS
-    lw r0, 0(r1)        ; count
-    add r0, 1
-    sw r0, 0(r1)        ; count++
-
-    mov r0, r2           ; r0 = quotient
-    ceq r0, z            ; done when quotient = 0
-    brf dot_div_loop
-
-    ; Emit all digits (they're on DS in reverse = correct print order)
-dot_emit_loop:
-    lw r0, 0(r1)        ; count
-    ceq r0, z
-    brt dot_emit_done
-    la r2, -65280
-dot_emit_tx:
-    lb r0, 1(r2)
-    cls r0, z
-    brt dot_emit_tx
-    pop r0
-    sb r0, 0(r2)
-    lw r0, 0(r1)
-    add r0, -1
-    sw r0, 0(r1)
-    bra dot_emit_loop
-
-dot_emit_done:
-    add r1, 3           ; pop count. RS: [IP]
-    ; Emit trailing space
-    lc r0, 32
-    push r0
-    la r2, -65280
-dot_sp_tx:
-    lb r0, 1(r2)
-    cls r0, z
-    brt dot_sp_tx
-    pop r0
-    sb r0, 0(r2)
-    ; Restore IP and NEXT
-    lw r2, 0(r1)
-    add r1, 3
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; ------------------------------------------------------------
 ; NUMBER ( c-addr -- n flag ) : Parse counted string as number
 ; flag=0 success, flag=-1 failure. Handles leading '-'.
 ; Pure assembly, no sub-calls. Uses RS for locals.
 ; RS frame: [sign, acc, ptr, rem, saved_IP]
+; (`.` is defined in Forth, see core/midlevel.fth.)
 ; ------------------------------------------------------------
 entry_number:
-    .word entry_dot
+    .word entry_sw_fetch
     .byte 6
     .byte 78, 85, 77, 66, 69, 82
 do_number:
@@ -2194,220 +2060,30 @@ sue2:
 ; Phase 4b: Debugging and Convenience Words
 ; ============================================================
 
-; CR / SPACE / HEX / DECIMAL moved to core/midlevel.fth (each is one
-; line of Forth: EMIT 10 / EMIT 32 / 16 BASE ! / 10 BASE !).
+; CR / SPACE / HEX / DECIMAL / . / DEPTH / .S moved to core/*.fth.
+; The data-stack pointer is exposed via SP@ below so DEPTH and .S can
+; be implemented in Forth.
 
 ; ------------------------------------------------------------
-; DEPTH ( -- n ) : Push data stack depth
-; Uses mov fp, sp to read sp. depth = (0xFEEC00 - sp) / 3.
+; SP@ ( -- sp ) : Push the value of the data stack pointer that the
+; caller saw at the moment SP@ was invoked. (The push itself decrements
+; sp by 3; the value left on top is sp BEFORE the push.) Used by the
+; Forth-level DEPTH and .S in core/highlevel.fth.
 ; ------------------------------------------------------------
-entry_depth:
+entry_sp_fetch:
     .word entry_quit
-    .byte 5
-    .byte 68, 69, 80, 84, 72 ; "DEPTH"
-do_depth:
+    .byte 3
+    .byte 83, 80, 64        ; "SP@"
+do_sp_fetch:
     add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-    ; Get sp into r0
+    sw r2, 0(r1)        ; save IP
     mov fp, sp
     push fp
-    pop r0               ; r0 = current sp (push/pop cancel out)
-    ; r0 = sp after we pushed IP. Total bytes = init_sp - r0.
-    ; init_sp = 0xFEEC00 = 16706560
-    add r1, -3
-    sw r0, 0(r1)        ; save sp on RS. RS: [sp_val, IP]
-    la r0, 16706560
-    lw r2, 0(r1)        ; r2 = sp_val
-    add r1, 3           ; pop. RS: [IP]
-    sub r0, r2           ; r0 = total_bytes (including our saved IP)
-    ; Divide r0 by 3 using scratch memory for quotient
-    la r2, depth_scratch
-    push r0              ; save r0 (total_bytes)
-    lc r0, 0
-    sw r0, 0(r2)        ; depth_scratch = 0 (quotient)
-    pop r0               ; restore r0 = total_bytes
-
-depth_div3:
-    lcu r2, 3
-    clu r0, r2           ; C = (r0 < 3)
-    brt depth_div3_done
-    sub r0, r2           ; r0 -= 3
-    ; Increment quotient in scratch
-    push r0              ; save remainder
-    la r0, depth_scratch
-    lw r2, 0(r0)
-    add r2, 1
-    sw r2, 0(r0)
-    pop r0               ; restore remainder
-    bra depth_div3
-
-depth_div3_done:
-    ; Load quotient from scratch
-    la r0, depth_scratch
-    lw r0, 0(r0)        ; depth = total_items
-    push r0              ; DS: [depth]
-    lw r2, 0(r1)
+    pop r0               ; r0 = sp value at primitive entry (push/pop net-zero)
+    push r0              ; push sp value onto DS
+    lw r2, 0(r1)        ; restore IP
     add r1, 3
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-depth_scratch:
-    .word 0
-
-; ------------------------------------------------------------
-; .S ( -- ) : Print stack non-destructively
-; Uses mov fp, sp to read sp, then walk EBR with lw r0, 0(fp).
-; Format: <n> val1 val2 ... valn (bottom to top)
-; ------------------------------------------------------------
-entry_dot_s:
-    .word entry_depth
-    .byte 2
-    .byte 46, 83             ; ".S"
-do_dot_s:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-
-    ; Compute depth (same as DEPTH algorithm)
-    mov fp, sp
-    push fp
-    pop r0               ; r0 = current sp
-    add r1, -3
-    sw r0, 0(r1)        ; save sp_val. RS: [sp_val, IP]
-    la r0, 16706560      ; 0xFEEC00
-    lw r2, 0(r1)
-    add r1, 3
-    sub r0, r2           ; r0 = total bytes
-    ; Divide by 3
-    la r2, depth_scratch
-    push r0
-    lc r0, 0
-    sw r0, 0(r2)
-    pop r0
-dots_div3:
-    lcu r2, 3
-    clu r0, r2
-    brt dots_div3_done
-    sub r0, r2
-    push r0
-    la r0, depth_scratch
-    lw r2, 0(r0)
-    add r2, 1
-    sw r2, 0(r0)
-    pop r0
-    bra dots_div3
-dots_div3_done:
-    la r0, depth_scratch
-    lw r2, 0(r0)        ; r2 = depth
-    add r1, -3
-    sw r2, 0(r1)        ; save depth. RS: [depth, IP]
-
-    ; Print "<depth> "
-    ; Emit '<'
-    lc r0, 60
-    push r0
-    la r2, -65280
-dots_lt_tx:
-    lb r0, 1(r2)
-    cls r0, z
-    brt dots_lt_tx
-    pop r0
-    sb r0, 0(r2)
-    ; Print depth digit (0-9 only for now)
-    lw r0, 0(r1)        ; depth
-    add r0, 48
-    push r0
-dots_n_tx:
-    lb r0, 1(r2)
-    cls r0, z
-    brt dots_n_tx
-    pop r0
-    sb r0, 0(r2)
-    ; Emit '>'
-    lc r0, 62
-    push r0
-dots_gt_tx:
-    lb r0, 1(r2)
-    cls r0, z
-    brt dots_gt_tx
-    pop r0
-    sb r0, 0(r2)
-    ; Emit ' '
-    lc r0, 32
-    push r0
-dots_sp1_tx:
-    lb r0, 1(r2)
-    cls r0, z
-    brt dots_sp1_tx
-    pop r0
-    sb r0, 0(r2)
-
-    ; Print each stack value bottom-to-top using do_dot via thread.
-    ; Bottom of stack is at 0xFEEC00 - 3 = 0xFEEBFD.
-    ; Top of stack is at sp (current).
-    ; Walk from (0xFEEC00 - 3) down to sp, printing each.
-    ; Actually: bottom is highest address, top is lowest.
-    ; Stack grows DOWN: sp starts at 0xFEEC00, first push goes to 0xFEEBFD.
-    ; So bottom-of-stack item is at 0xFEEBFD, and top is at sp.
-    ; Walk from 0xFEEBFD downward to sp.
-    ; Wait: walk from (init_sp - 3) DOWN to current_sp.
-    ; For each address, lw r0, 0(fp) where fp = address.
-
-    lw r0, 0(r1)        ; depth
-    ceq r0, z
-    brt dots_done        ; empty stack
-
-    ; Start address: 0xFEEC00 - 3 = 0xFEEBFD = 16706557
-    la r0, 16706557      ; 0xFEEBFD — bottom of stack
-    add r1, -3
-    sw r0, 0(r1)        ; save walk_ptr. RS: [walk_ptr, depth, IP]
-
-dots_walk:
-    ; Check if we've printed all items
-    lw r0, 3(r1)        ; depth (remaining count)
-    ceq r0, z
-    brt dots_walk_done
-
-    ; Read value at walk_ptr — need fp as base register
-    lw r0, 0(r1)        ; r0 = walk_ptr
-    push r0
-    pop fp               ; fp = walk_ptr
-    lw r0, 0(fp)        ; r0 = stack value at this address
-    push r0              ; push for do_dot
-
-    ; Decrement remaining count
-    lw r0, 3(r1)
-    add r0, -1
-    sw r0, 3(r1)
-
-    ; Advance walk_ptr down by 3
-    lw r0, 0(r1)
-    add r0, -3
-    sw r0, 0(r1)
-
-    ; Call do_dot via thread
-    la r2, dots_dot_thread
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-dots_dot_thread:
-    .word do_dot
-    .word do_dots_continue
-
-do_dots_continue:
-    ; After do_dot returns, loop back
-    ; RS: [walk_ptr, depth, IP]
-    la r0, dots_walk
-    jmp (r0)
-
-dots_walk_done:
-    add r1, 3           ; pop walk_ptr. RS: [depth, IP]
-
-dots_done:
-    add r1, 3           ; pop depth. RS: [IP]
-    lw r2, 0(r1)
-    add r1, 3
+    ; NEXT
     lw r0, 0(r2)
     add r2, 3
     jmp (r0)
@@ -2415,7 +2091,7 @@ dots_done:
 ; Walk from LATEST following link fields, print each name.
 ; ------------------------------------------------------------
 entry_words:
-    .word entry_dot_s
+    .word entry_sp_fetch
     .byte 5
     .byte 87, 79, 82, 68, 83 ; "WORDS"
 do_words:
