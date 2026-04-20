@@ -53,6 +53,59 @@ _start:
     sw r2, 0(r0)        ; HERE = first free byte
 
     ; ============================================================
+    ; Populate the FIND hash table (256 buckets, indexed by first
+    ; char of name). Each bucket holds the most-recent entry whose
+    ; name starts with that byte. See do_find / do_create for use.
+    ; ============================================================
+    ; Zero table (256 × 3 bytes = 768 bytes).
+    ; Stash end-address on RS; r0 = ptr, r2 = value (0) each iter.
+    la r2, dict_hash_table_end
+    add r1, -3
+    sw r2, 0(r1)         ; RS: [end_addr]
+    la r0, dict_hash_table
+ht_zero_loop:
+    lc r2, 0
+    sw r2, 0(r0)         ; slot = 0
+    add r0, 3
+    lw r2, 0(r1)         ; r2 = end_addr
+    clu r0, r2
+    brt ht_zero_loop
+    add r1, 3            ; pop end_addr
+
+    ; Walk LATEST chain (newest→oldest). Set each bucket to the
+    ; NEWEST entry with that first char — i.e., only set a bucket
+    ; if it's currently empty (since we walk newest first).
+    la r0, var_latest_val
+    lw r0, 0(r0)        ; r0 = newest entry
+ht_pop_loop:
+    ceq r0, z
+    brt ht_pop_done
+    ; Compute slot_addr = dict_hash_table + 3 * first_char(entry)
+    push r0              ; save entry on DS
+    lbu r2, 4(r0)       ; r2 = first char (r0 = base, r2 = dest — separate regs)
+    lc r0, 3
+    mul r0, r2          ; r0 = 3 * first_char (offset into table)
+    add r1, -3
+    sw r0, 0(r1)        ; RS: [offset, ...]
+    la r0, dict_hash_table
+    lw r2, 0(r1)        ; r2 = offset
+    add r1, 3
+    add r0, r2          ; r0 = slot addr
+    lw r2, 0(r0)        ; r2 = current slot value
+    ceq r2, z
+    brt ht_pop_set
+    ; Slot already has a (newer-than-current) entry; skip.
+    pop r0               ; restore entry
+    lw r0, 0(r0)        ; follow link
+    bra ht_pop_loop
+ht_pop_set:
+    pop r2               ; r2 = entry (from push r0)
+    sw r2, 0(r0)        ; *slot = entry
+    lw r0, 0(r2)        ; follow link
+    bra ht_pop_loop
+ht_pop_done:
+
+    ; ============================================================
     ; Launch threaded code tests (Phase 2 + Phase 3)
     ; ============================================================
     la r2, test_thread  ; IP = start of test thread
@@ -869,9 +922,24 @@ do_find:
     add r1, -3
     sw r0, 0(r1)        ; save search_start RS: [ss, sl, ca, IP]
 
-    ; Load LATEST and push on DS for find_loop
-    la r0, var_latest_val
-    lw r0, 0(r0)
+    ; Load start entry via hash (fallback to LATEST if bucket empty).
+    ; RS currently holds [ss, sl, ca, IP]; ss = name start (c-addr+1).
+    lw r0, 0(r1)        ; r0 = search_start
+    lbu r2, 0(r0)       ; r2 = first char of name (r0 preserved as base)
+    lc r0, 3
+    mul r0, r2          ; r0 = 3 * first_char
+    add r1, -3
+    sw r0, 0(r1)        ; stash offset on RS
+    la r0, dict_hash_table
+    lw r2, 0(r1)        ; r2 = offset
+    add r1, 3
+    add r0, r2          ; r0 = slot addr
+    lw r0, 0(r0)        ; r0 = bucket entry (or 0)
+    ceq r0, z
+    brf find_have_start
+    la r2, var_latest_val
+    lw r0, 0(r2)        ; fallback: start at LATEST
+find_have_start:
     push r0              ; DS: [entry]
 
 find_loop:
@@ -1315,6 +1383,23 @@ create_copy_done:
     sw r0, 0(r2)        ; LATEST = new_entry
     lw r2, 0(r1)        ; restore r2
     add r1, 3           ; RS: [IP]
+
+    ; Insert new_entry into FIND hash table (bucket = first char of name).
+    ; r0 still holds new_entry; first char is at new_entry+4.
+    add r1, -3
+    sw r0, 0(r1)        ; stash entry. RS: [entry, IP]
+    lbu r2, 4(r0)       ; r2 = first char (separate dest)
+    lc r0, 3
+    mul r0, r2          ; r0 = 3 * first_char
+    add r1, -3
+    sw r0, 0(r1)        ; RS: [offset, entry, IP]
+    la r0, dict_hash_table
+    lw r2, 0(r1)        ; r2 = offset
+    add r1, 3           ; pop offset
+    add r0, r2          ; r0 = slot addr
+    lw r2, 0(r1)        ; r2 = entry
+    sw r2, 0(r0)        ; *slot = entry
+    add r1, 3           ; pop entry. RS: [IP]
 
     ; Restore IP and NEXT
     lw r2, 0(r1)
@@ -2162,6 +2247,46 @@ var_base_val:
     .word 10
 var_sp_base:
     .word 0             ; snapshot of initial sp taken at _start
+
+; ============================================================
+; FIND hash table: 256 buckets × 3 bytes = 768 bytes.
+; Bucket[c] holds the most-recent dict entry whose name starts
+; with byte c. Populated at _start; maintained by do_create.
+; ============================================================
+dict_hash_table:
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+dict_hash_table_end:
 
     .word do_exit
 
