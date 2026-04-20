@@ -100,6 +100,41 @@ Assembled binary went from 3879 → 2786 bytes (−1093 bytes, −28%).
   `DUP SQUARE * ;`.
 - `repl.sh` boots an interactive prompt with all core words loaded.
 
+## Performance notes — hashed FIND (gh issue #1)
+
+Subset-11 kernel adds a 256-bucket first-char hash table to accelerate
+`FIND`. Populated at `_start` by walking the LATEST chain (newest first,
+only sets empty buckets so each bucket holds the newest entry with
+that first char); maintained by `do_create` on every new header.
+Lookup falls back to linear-walk-from-LATEST on bucket miss.
+
+**Correctness**: all reg-rs tests still pass; `SEE`, `DUMP-ALL`,
+examples all produce identical UART output to the pre-hash kernel.
+
+**Measured speedup on fib-demo compile**: ~0% within timestamp
+resolution (cor24-run reports instruction timestamps rounded to 10K).
+Last UART TX for fib complete: 61.17M inst (with hash) vs 61.17M inst
+(without).
+
+**Why so small**: profiling shows `FIND` is only ~0.3% of compile
+time on our 50-entry dictionary. The 99.7% is split between KEY's
+UART busy-wait loop (spinning while `cor24-run` delivers the next
+input byte) and the threaded-code overhead of the IMMEDIATE words
+defined in Forth (IF/BEGIN/UNTIL/etc.). Shrinking FIND from 250 inst
+to 50 inst per lookup saves ~200 inst × ~1000 lookups = ~200K inst,
+which disappears into the 61M total.
+
+**Collision caveat**: first-char-only hash puts EMIT/EXIT in the
+same bucket, same for OVER/OR, etc. These pairs hit the linear
+fallback. Upgrading to a multiplicative hash (per `../../docs/hashing.txt`)
+would reduce collisions but not change the overall runtime picture.
+
+**Real bottleneck for future work**: if bootstrap speed becomes
+important, the paths worth optimizing are (a) `cor24-run --uart-input`
+delivery rate, or (b) re-promoting heavily-called IMMEDIATE words
+(like `\` and `(`) to asm primitives — that'd claw back several ×
+more instructions than any FIND change.
+
 ## Known cosmetic differences
 
 - Forth `.S` prints `<N >` (extra space before `>`) instead of asm's
