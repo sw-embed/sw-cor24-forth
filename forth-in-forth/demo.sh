@@ -12,9 +12,14 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 cd "$HERE/.."
 EXAMPLE="${1:-examples/14-fib.fth}"
-CORE="$HERE/core.fth"
-[ -f "$CORE" ] || touch "$CORE"
-INPUT="$(cat "$CORE" "$EXAMPLE")
+# Concatenate all core tiers (minimal → lowlevel → midlevel → highlevel)
+# in a fixed order so lower tiers are defined before higher tiers use them.
+CORE_FILES=()
+for tier in minimal lowlevel midlevel highlevel; do
+  f="$HERE/core/$tier.fth"
+  [ -f "$f" ] && CORE_FILES+=("$f")
+done
+INPUT="$(cat "${CORE_FILES[@]}" "$EXAMPLE" 2>/dev/null)
 "
-cor24-run --run "$HERE/kernel.s" -u "$INPUT" --speed 0 -n 40000000 2>&1 \
-  | grep "^UART output:" -A 100 || true
+cor24-run --run "$HERE/kernel.s" -u "$INPUT" --speed 0 -n 200000000 2>&1 \
+  | grep "^UART output:" -A 200 || true

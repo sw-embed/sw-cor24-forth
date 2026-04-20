@@ -181,10 +181,12 @@ do_lit:
 
 ; ------------------------------------------------------------
 ; BRANCH ( -- ) : Unconditional relative branch [HIDDEN]
+; BRANCH ( -- ) : Unconditional relative branch (visible, used by IMMEDIATE
+; control-flow words defined in core.fth)
 ; ------------------------------------------------------------
 entry_branch:
     .word entry_lit
-    .byte 70
+    .byte 6
     .byte 66, 82, 65, 78, 67, 72
 do_branch:
     lw r0, 0(r2)        ; r0 = signed offset
@@ -195,11 +197,12 @@ do_branch:
     jmp (r0)
 
 ; ------------------------------------------------------------
-; 0BRANCH ( flag -- ) : Branch if TOS is zero [HIDDEN]
+; 0BRANCH ( flag -- ) : Branch if TOS is zero (visible, used by IMMEDIATE
+; control-flow words defined in core.fth)
 ; ------------------------------------------------------------
 entry_zbranch:
     .word entry_branch
-    .byte 71
+    .byte 7
     .byte 48, 66, 82, 65, 78, 67, 72
 do_zbranch:
     pop r0               ; r0 = flag
@@ -2682,173 +2685,39 @@ backslash_eol:
     add r2, 3
     jmp (r0)
 
+; ============================================================
+; IF / THEN / ELSE / BEGIN / UNTIL — moved to core.fth
+; ============================================================
+; These IMMEDIATE control-flow words are now defined in Forth using
+; BRANCH, 0BRANCH, HERE, `,`, `!`, and the helper [']. See core.fth.
+
 ; ------------------------------------------------------------
-; IF ( -- ) : Begin conditional [IMMEDIATE]
-; Compile 0BRANCH + placeholder offset. Push placeholder addr.
+; ['] ( -- ) : At compile time, read next word, look up its CFA,
+; and compile `LIT cfa` into the current definition [IMMEDIATE].
+; Used by core.fth's IF/THEN/ELSE/UNTIL to embed BRANCH/0BRANCH CFAs.
 ; ------------------------------------------------------------
-entry_if:
+entry_tick:
     .word entry_backslash
-    .byte 0x82           ; length=2 + IMMEDIATE
-    .byte 73, 70         ; "IF"
-do_if:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-    ; Compile do_zbranch at HERE
-    la r0, var_here_val
-    lw r2, 0(r0)        ; r2 = HERE
-    la r0, do_zbranch
-    sw r0, 0(r2)        ; mem[HERE] = do_zbranch
-    add r2, 3            ; HERE += 3
-    ; Compile placeholder (0) at HERE, save its address
-    add r1, -3
-    sw r2, 0(r1)        ; save placeholder addr on RS. RS: [patch_addr, IP]
-    lc r0, 0
-    sw r0, 0(r2)        ; mem[HERE] = 0 (placeholder offset)
-    add r2, 3            ; HERE += 3
-    la r0, var_here_val
-    sw r2, 0(r0)        ; update HERE
-    ; Push placeholder address onto data stack for THEN
-    lw r0, 0(r1)        ; patch_addr
-    add r1, 3           ; pop patch_addr. RS: [IP]
-    push r0              ; DS: [patch_addr]
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
+    .byte 0x83           ; length=3 + IMMEDIATE
+    .byte 91, 39, 93     ; "[']"
+tick_word_cfa:
+    push r0
+    la r0, do_docol_far
     jmp (r0)
-
-; ------------------------------------------------------------
-; THEN ( -- ) : End conditional [IMMEDIATE]
-; Pop patch address, compute offset, store it.
-; ------------------------------------------------------------
-entry_then:
-    .word entry_if
-    .byte 0x84           ; length=4 + IMMEDIATE
-    .byte 84, 72, 69, 78 ; "THEN"
-do_then:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-    pop r0               ; r0 = patch_addr (from IF)
-    ; Compute offset = HERE - patch_addr
-    la r2, var_here_val
-    lw r2, 0(r2)        ; r2 = HERE
-    sub r2, r0           ; r2 = offset
-    ; Store offset at patch_addr
-    sw r2, 0(r0)        ; mem[patch_addr] = offset
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; ------------------------------------------------------------
-; ELSE ( -- ) : Else clause in conditional [IMMEDIATE]
-; Compile BRANCH + placeholder, patch IF's placeholder, push new placeholder.
-; ------------------------------------------------------------
-entry_else:
-    .word entry_then
-    .byte 0x84           ; length=4 + IMMEDIATE
-    .byte 69, 76, 83, 69 ; "ELSE"
-do_else:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-    ; Compile do_branch at HERE
-    la r0, var_here_val
-    lw r2, 0(r0)        ; r2 = HERE
-    la r0, do_branch
-    sw r0, 0(r2)        ; mem[HERE] = do_branch
-    add r2, 3            ; HERE += 3
-    ; Compile placeholder (0) at HERE
-    add r1, -3
-    sw r2, 0(r1)        ; save else_patch addr on RS. RS: [else_patch, IP]
-    lc r0, 0
-    sw r0, 0(r2)        ; mem[HERE] = 0 (placeholder)
-    add r2, 3            ; HERE += 3
-    la r0, var_here_val
-    sw r2, 0(r0)        ; update HERE
-    ; Pop IF's patch_addr from DS, compute offset, patch it
-    pop r0               ; r0 = IF's patch_addr
-    la r2, var_here_val
-    lw r2, 0(r2)        ; r2 = HERE
-    sub r2, r0           ; r2 = offset = HERE - patch_addr
-    sw r2, 0(r0)        ; mem[patch_addr] = offset
-    ; Push ELSE's placeholder addr for THEN
-    lw r0, 0(r1)        ; else_patch addr
-    add r1, 3           ; pop. RS: [IP]
-    push r0              ; DS: [else_patch_addr]
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; ------------------------------------------------------------
-; BEGIN ( -- ) : Loop start [IMMEDIATE]
-; Push current HERE onto data stack (no code compiled)
-; ------------------------------------------------------------
-entry_begin:
-    .word entry_else
-    .byte 0x85           ; length=5 + IMMEDIATE
-    .byte 66, 69, 71, 73, 78 ; "BEGIN"
-do_begin:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-    la r0, var_here_val
-    lw r0, 0(r0)        ; r0 = HERE
-    push r0              ; DS: [begin_addr]
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; ------------------------------------------------------------
-; UNTIL ( flag -- ) : Loop end, branch back if flag=0 [IMMEDIATE]
-; Compile 0BRANCH + backward offset to BEGIN
-; ------------------------------------------------------------
-entry_until:
-    .word entry_bye
-    .byte 0x85           ; length=5 + IMMEDIATE
-    .byte 85, 78, 84, 73, 76 ; "UNTIL"
-do_until:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-    ; Compile do_zbranch at HERE
-    la r0, var_here_val
-    lw r2, 0(r0)        ; r2 = HERE
-    la r0, do_zbranch
-    sw r0, 0(r2)        ; mem[HERE] = do_zbranch
-    add r2, 3            ; HERE += 3
-    ; Compile placeholder (0) at HERE
-    add r1, -3
-    sw r2, 0(r1)        ; save placeholder addr on RS. RS: [patch, IP]
-    lc r0, 0
-    sw r0, 0(r2)        ; mem[HERE] = 0
-    add r2, 3            ; HERE += 3
-    la r0, var_here_val
-    sw r2, 0(r0)        ; update HERE
-    ; Pop begin_addr from DS, compute offset, patch
-    pop r0               ; r0 = begin_addr
-    lw r2, 0(r1)        ; r2 = placeholder addr
-    add r1, 3           ; pop. RS: [IP]
-    sub r0, r2           ; r0 = begin_addr - patch_addr = offset
-    sw r0, 0(r2)        ; mem[patch_addr] = offset
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
+    .word do_word        ; ( -- c-addr )
+    .word do_find        ; ( c-addr -- cfa flag )  [assumes word is found]
+    .word do_drop        ; drop flag, leaves cfa on DS
+    .word do_lit
+    .word do_lit         ; push address of do_lit itself
+    .word do_comma       ; compile do_lit into current def
+    .word do_comma       ; compile the CFA that was on DS
+    .word do_exit
 
 ; ------------------------------------------------------------
 ; BYE ( -- ) : Halt the CPU
 ; ------------------------------------------------------------
 entry_bye:
-    .word entry_begin
+    .word entry_tick
     .byte 3
     .byte 66, 89, 69        ; "BYE"
 do_bye:
@@ -2869,7 +2738,7 @@ var_sp_base:
     .word 0             ; snapshot of initial sp taken at _start
 
 entry_ver:
-    .word entry_until       ; link to previous word
+    .word entry_bye         ; link to previous word (was entry_until, now stripped)
     .byte 3
     .byte 86, 69, 82      ; "VER"
 ver_word_cfa:
