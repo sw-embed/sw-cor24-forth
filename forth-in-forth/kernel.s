@@ -2612,84 +2612,34 @@ words_next:
     la r2, words_loop
     jmp (r2)
 
-; ------------------------------------------------------------
-; ( ( -- ) : Paren comment — discard until ')' [IMMEDIATE]
-; Reads and discards UART bytes until closing paren.
-; ------------------------------------------------------------
-entry_paren:
-    .word entry_words
-    .byte 0x81           ; length=1 + IMMEDIATE flag (bit 7)
-    .byte 40             ; "("
-do_paren:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP
-paren_loop:
-    la r0, -65280        ; UART base (0xFF0100)
-paren_rx:
-    lbu r2, 1(r0)       ; UART status
-    lcu r0, 1
-    and r2, r0
-    ceq r2, z
-    brt paren_loop       ; not ready, spin (must reload r0)
-    la r0, -65280
-    lbu r0, 0(r0)       ; read char
-    lcu r2, 41           ; ')'
-    ceq r0, r2
-    brt paren_done       ; found closing paren
-    bra paren_loop
-paren_done:
-    lw r2, 0(r1)        ; restore IP
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
+; ============================================================
+; `\` / `(` / IF / THEN / ELSE / BEGIN / UNTIL — moved to core/minimal.fth
+; ============================================================
+; These IMMEDIATE words are now defined in Forth. The kernel only
+; retains the helpers they need: BRANCH, 0BRANCH, KEY, EOL!, and [']
+; (defined below).
 
 ; ------------------------------------------------------------
-; \ ( -- ) : Line comment — discard rest of line [IMMEDIATE]
-; Reads and discards UART bytes until newline, then sets EOL flag.
+; EOL! ( -- ) : Force next WORD call to return an empty token.
+; Used by Forth-defined `\` to signal end-of-line to QUIT after
+; the newline has been consumed via KEY.
 ; ------------------------------------------------------------
-entry_backslash:
-    .word entry_paren
-    .byte 0x81           ; length=1 + IMMEDIATE flag (bit 7)
-    .byte 92             ; "\"
-do_backslash:
+entry_eol_store:
+    .word entry_words
+    .byte 4
+    .byte 69, 79, 76, 33     ; "EOL!"
+do_eol_store:
     add r1, -3
-    sw r2, 0(r1)        ; save IP
-backslash_loop:
-    la r0, -65280        ; UART base (0xFF0100)
-backslash_rx:
-    lbu r2, 1(r0)       ; UART status
-    lcu r0, 1
-    and r2, r0
-    ceq r2, z
-    brt backslash_loop   ; not ready, spin (must reload r0)
-    la r0, -65280
-    lbu r0, 0(r0)       ; read char
-    lcu r2, 10
-    ceq r0, r2           ; is newline?
-    brt backslash_eol
-    lcu r2, 13
-    ceq r0, r2           ; is CR?
-    brt backslash_eol
-    bra backslash_loop   ; keep reading
-backslash_eol:
-    ; Set EOL flag so next WORD returns empty
+    sw r2, 0(r1)         ; save IP (r2 clobbered below)
     la r0, word_eol_flag
     lc r2, 1
     sb r2, 0(r0)
-    lw r2, 0(r1)        ; restore IP
+    lw r2, 0(r1)         ; restore IP
     add r1, 3
     ; NEXT
     lw r0, 0(r2)
     add r2, 3
     jmp (r0)
-
-; ============================================================
-; IF / THEN / ELSE / BEGIN / UNTIL — moved to core.fth
-; ============================================================
-; These IMMEDIATE control-flow words are now defined in Forth using
-; BRANCH, 0BRANCH, HERE, `,`, `!`, and the helper [']. See core.fth.
 
 ; ------------------------------------------------------------
 ; ['] ( -- ) : At compile time, read next word, look up its CFA,
@@ -2697,7 +2647,7 @@ backslash_eol:
 ; Used by core.fth's IF/THEN/ELSE/UNTIL to embed BRANCH/0BRANCH CFAs.
 ; ------------------------------------------------------------
 entry_tick:
-    .word entry_backslash
+    .word entry_eol_store
     .byte 0x83           ; length=3 + IMMEDIATE
     .byte 91, 39, 93     ; "[']"
 tick_word_cfa:
