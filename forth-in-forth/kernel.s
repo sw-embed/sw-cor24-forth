@@ -372,32 +372,12 @@ do_xor:
     add r2, 3
     jmp (r0)
 
-; = ( n1 n2 -- flag ) : -1 if equal, 0 otherwise
-entry_equal:
-    .word entry_xor
-    .byte 1
-    .byte 61
-do_equal:
-    add r1, -3
-    sw r2, 0(r1)
-    pop r2
-    pop r0
-    ceq r0, r2           ; C = (n1 == n2)
-    lc r0, 0
-    brf eq_done
-    lc r0, -1
-eq_done:
-    push r0
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
+; = and 0= moved to core/lowlevel.fth (via XOR and IF/ELSE).
+; Only < remains as a primitive (needs signed compare `cls`).
 
 ; < ( n1 n2 -- flag ) : -1 if n1 < n2 signed, 0 otherwise
 entry_less:
-    .word entry_equal
+    .word entry_xor
     .byte 1
     .byte 60
 do_less:
@@ -418,31 +398,13 @@ lt_done:
     add r2, 3
     jmp (r0)
 
-; 0= ( n -- flag ) : -1 if zero, 0 otherwise
-entry_zequ:
-    .word entry_less
-    .byte 2
-    .byte 48, 61
-do_zequ:
-    pop r0
-    ceq r0, z
-    lc r0, 0
-    brf zeq_done
-    lc r0, -1
-zeq_done:
-    push r0
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
 ; ============================================================
 ; Stack Primitives
 ; ============================================================
 
 ; DROP ( x -- )
 entry_drop:
-    .word entry_zequ
+    .word entry_less
     .byte 4
     .byte 68, 82, 79, 80
 do_drop:

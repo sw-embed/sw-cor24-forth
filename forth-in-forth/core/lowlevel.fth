@@ -1,5 +1,5 @@
-\ lowlevel.fth: stack and arithmetic helpers built from primitives.
-\ Additive — no kernel words removed at this tier.
+\ lowlevel.fth: stack, arithmetic, and division helpers built from primitives.
+\ (0= and = moved up to minimal.fth because the comment parsers depend on them.)
 
 \ ---- Single-cell stack helpers ----
 : NIP   SWAP DROP ;
