@@ -120,7 +120,7 @@ Within `./forth-in-forth/`:
 Beyond `./forth-in-forth/` (see `../../docs/future.md` for the full
 four-approach comparison and naming):
 
-- **`./forth-in-forthish/`** (approach 3): refactor the kernel down to
+- **`./forth-on-forthish/`** (approach 3): refactor the kernel down to
   ~22 irreducible primitives, push `:` `;` `*` `/MOD` `WORD` `FIND`
   `NUMBER` `INTERPRET` `QUIT` and the stack-ops into Forth. Net: kernel
   shrinks to ~700 asm lines (~76% reduction from today).

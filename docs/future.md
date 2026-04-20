@@ -34,7 +34,7 @@ in plain Forth using primitives the bootstrap layer already provides.
 |---|------|-----------|---|
 | 1 | All-asm kernel | `./` (repo root) | Hand-written `.s` |
 | 2 | Tiered Forth on a slimmed kernel | `./forth-in-forth/` | Hand-written `.s` + hand-written `.fth` (today) |
-| 3 | Minimal-primitive kernel | `./forth-in-forthish/` | Smaller hand-written `.s` (a Forth-ish primitive substrate) + larger hand-written `.fth` |
+| 3 | Minimal-primitive kernel | `./forth-on-forthish/` | Smaller hand-written `.s` (a Forth-ish primitive substrate) + larger hand-written `.fth` |
 | 4 | Self-hosted via cross-compiler | `./forth-from-forth/` | Hand-written *Forth* compiler emits the `.s` |
 
 The "in / in-ish / from" preposition family signals what the kernel is to
@@ -59,7 +59,7 @@ the dict-text triplet (`WORD`/`FIND`/`NUMBER`), the outer loop
 comments, equality, base, number print, stack helpers, dict
 diagnostics) is Forth.
 
-### Approach 3 — what we could do better — `./forth-in-forthish/`
+### Approach 3 — what we could do better — `./forth-on-forthish/`
 
 Refactor the kernel to replace high-level asm primitives with smaller,
 more orthogonal ones, then move much more to Forth.
@@ -118,7 +118,7 @@ specification.
 |---|---:|---:|---:|---|
 | 1: all-asm | ~2983 | 0 | 2983 | 0 |
 | 2: today | 2239 | 161 | 2400 | 0 |
-| 3: forth-in-forthish | ~700 | ~600 | ~1300 | 0 |
+| 3: forth-on-forthish | ~700 | ~600 | ~1300 | 0 |
 | 4: forth-from-forth | 0 | ~1000 | ~1000 | the entire `.s` |
 
 ### Asm primitive count
@@ -127,7 +127,7 @@ specification.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1: all-asm | 7 | 7 | 4 | 9 | 2 | 3 | 17 | 2 | 3 | ~65 |
 | 2: today | 7 | 7 | 4 | 8 | 2 | 3 | 14 | 2 | 3 | 50 |
-| 3: forth-in-forthish | 7 | 0 (SP@/!) | 4 | 2 (+, NAND) | 2 | 0 | 4 (HERE/LATEST/STATE/BASE) | 0 | 3 | ~22 |
+| 3: forth-on-forthish | 7 | 0 (SP@/!) | 4 | 2 (+, NAND) | 2 | 0 | 4 (HERE/LATEST/STATE/BASE) | 0 | 3 | ~22 |
 | 4: forth-from-forth | (same primitive set as 3, but emitted from Forth) | | | | | | | | | ~22 emitted |
 
 ### What lives in Forth
@@ -155,7 +155,7 @@ specification.
 |---|---|---|
 | 1: all-asm | Self-contained, fast, single file to debug. | Doesn't show Forth's self-extending nature. ~3000 lines of asm to maintain. |
 | 2: today | Demonstrates the "Forth-extends-itself" story (`SEE FIB` works). Smaller asm. Tiered `.fth` makes the dependency layering explicit. | Compile-time IMMEDIATE words are slower (instruction budget grows from 5M to 200–400M). Still 50 asm primitives. |
-| 3: forth-in-forthish | Pushes asm down to the irreducible ~22 primitives — most of the kernel becomes Forth. The kernel becomes easy to retarget. | Significantly slower (every text-input call goes through Forth `WORD`/`FIND`/`NUMBER`). More tricky bootstrap ordering. Stack ops via `SP@` are noticeably slower than direct push/pop. |
+| 3: forth-on-forthish | Pushes asm down to the irreducible ~22 primitives — most of the kernel becomes Forth. The kernel becomes easy to retarget. | Significantly slower (every text-input call goes through Forth `WORD`/`FIND`/`NUMBER`). More tricky bootstrap ordering. Stack ops via `SP@` are noticeably slower than direct push/pop. |
 | 4: forth-from-forth | No hand-written asm in the source tree. Retargeting to a different ISA = swapping the asm-emit module. Cleanest pedagogical story: "here's Forth; here's the compiler that produces its own kernel." | Bootstrap chicken-and-egg: need *some* Forth to run the cross-compiler the first time. Build process becomes two-stage. The cross-compiler is itself a non-trivial piece of code (~1000 lines). |
 
 ### Engineering effort to reach each approach (from approach 2 today)
@@ -172,7 +172,7 @@ specification.
 |---|---:|---:|---|
 | 1: all-asm | 100% | 0% | none |
 | 2: today | 93% (kernel) | 7% (core/*.fth) | none |
-| 3: forth-in-forthish | 54% | 46% | none |
+| 3: forth-on-forthish | 54% | 46% | none |
 | 4: forth-from-forth | 0% | 100% | the kernel `.s` (or binary) |
 
 ## Recommendation
@@ -181,7 +181,7 @@ Approach 2 (today) is a great teaching artifact and stops at a natural
 plateau: the words that *had* alternatives easy to express in plain
 Forth all moved.
 
-Approach 3 (`./forth-in-forthish/`) is the next sensible target if the
+Approach 3 (`./forth-on-forthish/`) is the next sensible target if the
 goal is "minimal kernel". The biggest single win is moving
 `:`/`;`/`WORD`/`FIND`/`NUMBER` to Forth; that alone clears ~700 asm
 lines.
@@ -199,7 +199,7 @@ A reasonable phased plan:
 3. **Subset 14** (medium): move `*`/`/MOD`/`-` to Forth as loops; move
    `AND`/`OR`/`XOR` to Forth derived from a new `NAND` primitive.
 4. **Subset 15** (large): move `WORD`/`FIND`/`NUMBER`/`INTERPRET`/`QUIT`
-   to Forth. After this, kernel is approach 3 (`./forth-in-forthish/`).
+   to Forth. After this, kernel is approach 3 (`./forth-on-forthish/`).
 5. **Subset 16** (separate project): build the cross-compiler in Forth
    under `./forth-from-forth/`. Use the approach-3 kernel to host its
    first run. Generate the approach-4 kernel as a build artifact.

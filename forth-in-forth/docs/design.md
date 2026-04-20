@@ -128,6 +128,6 @@ On the subset-3 kernel: ~120M instructions suffice; `demo.sh` uses
 
 Projected kernel after all subsets: ~2300 lines (down from ~3000).
 Further reductions (e.g. moving `*` and `/MOD` to Forth loops, or
-moving `:` and `;`) are deferred to `./forth-in-forthish/` — see
+moving `:` and `;`) are deferred to `./forth-on-forthish/` — see
 `../../docs/future.md` for the full four-approach plan, including the
 fully cross-compiled `./forth-from-forth/` end state.
