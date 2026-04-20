@@ -45,7 +45,7 @@ _start:
     sw r0, 0(r2)
 
     ; Initialize system variables (r0, r2 free before Phase 1)
-    la r2, entry_ver
+    la r2, entry_bye    ; LATEST init (was entry_ver before VER moved to Forth)
     la r0, var_latest_val
     sw r2, 0(r0)        ; LATEST = last dictionary entry
     la r2, dict_end
@@ -2088,105 +2088,6 @@ do_sp_fetch:
     add r2, 3
     jmp (r0)
 
-; Walk from LATEST following link fields, print each name.
-; ------------------------------------------------------------
-entry_words:
-    .word entry_sp_fetch
-    .byte 5
-    .byte 87, 79, 82, 68, 83 ; "WORDS"
-do_words:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-
-    ; Load LATEST
-    la r0, var_latest_val
-    lw r0, 0(r0)        ; r0 = current entry
-
-words_loop:
-    ceq r0, z
-    brf words_have_entry
-    ; End of dictionary
-    lw r2, 0(r1)
-    add r1, 3
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-words_have_entry:
-    add r1, -3
-    sw r0, 0(r1)        ; save entry ptr. RS: [entry, IP]
-
-    ; Read flags_len at entry+3
-    lbu r2, 3(r0)       ; flags_len
-
-    ; Check HIDDEN (bit 6)
-    push r2              ; save flags_len
-    lcu r0, 64
-    and r0, r2
-    ceq r0, z
-    pop r2               ; restore flags_len
-    brt words_not_hidden
-    ; Hidden: skip
-    la r0, words_next
-    jmp (r0)
-
-words_not_hidden:
-    ; Extract name_len = flags_len & 0x3F
-    lcu r0, 63
-    and r2, r0           ; r2 = name_len
-
-    ; Print name chars at entry+4
-    lw r0, 0(r1)        ; entry
-    add r0, 4           ; r0 = name start
-    add r1, -3
-    sw r0, 0(r1)        ; save name_ptr. RS: [name_ptr, entry, IP]
-    add r1, -3
-    sw r2, 0(r1)        ; save name_len. RS: [name_len, name_ptr, entry, IP]
-
-words_print_char:
-    lw r0, 0(r1)        ; name_len
-    ceq r0, z
-    brt words_print_done
-    lw r0, 3(r1)        ; name_ptr
-    lbu r0, 0(r0)       ; char
-    push r0
-    la r2, -65280
-words_char_tx:
-    lb r0, 1(r2)
-    cls r0, z
-    brt words_char_tx
-    pop r0
-    sb r0, 0(r2)
-    ; Advance
-    lw r0, 3(r1)
-    add r0, 1
-    sw r0, 3(r1)
-    lw r0, 0(r1)
-    add r0, -1
-    sw r0, 0(r1)
-    bra words_print_char
-
-words_print_done:
-    add r1, 6           ; pop name_len, name_ptr. RS: [entry, IP]
-    ; Print space separator
-    lc r0, 32
-    push r0
-    la r2, -65280
-words_sp_tx:
-    lb r0, 1(r2)
-    cls r0, z
-    brt words_sp_tx
-    pop r0
-    sb r0, 0(r2)
-
-words_next:
-    ; Follow link: next = mem[entry]
-    lw r0, 0(r1)        ; entry
-    add r1, 3           ; pop entry. RS: [IP]
-    lw r0, 0(r0)        ; follow link
-    la r2, words_loop
-    jmp (r2)
-
 ; ============================================================
 ; `\` / `(` / IF / THEN / ELSE / BEGIN / UNTIL — moved to core/minimal.fth
 ; ============================================================
@@ -2200,7 +2101,7 @@ words_next:
 ; the newline has been consumed via KEY.
 ; ------------------------------------------------------------
 entry_eol_store:
-    .word entry_words
+    .word entry_sp_fetch    ; was entry_words; WORDS now in core/highlevel.fth
     .byte 4
     .byte 69, 79, 76, 33     ; "EOL!"
 do_eol_store:
@@ -2262,46 +2163,6 @@ var_base_val:
 var_sp_base:
     .word 0             ; snapshot of initial sp taken at _start
 
-entry_ver:
-    .word entry_bye         ; link to previous word (was entry_until, now stripped)
-    .byte 3
-    .byte 86, 69, 82      ; "VER"
-ver_word_cfa:
-    push r0
-    la r0, do_docol_far
-    jmp (r0)
-    .word do_lit, 67       ; 'C'
-    .word do_emit
-    .word do_lit, 79       ; 'o'
-    .word do_emit
-    .word do_lit, 82       ; 'R'
-    .word do_emit
-    .word do_lit, 50       ; '2'
-    .word do_emit
-    .word do_lit, 52       ; '4'
-    .word do_emit
-    .word do_lit, 32       ; ' '
-    .word do_emit
-    .word do_lit, 70       ; 'F'
-    .word do_emit
-    .word do_lit, 111      ; 'o'
-    .word do_emit
-    .word do_lit, 114      ; 'r'
-    .word do_emit
-    .word do_lit, 116      ; 't'
-    .word do_emit
-    .word do_lit, 104      ; 'h'
-    .word do_emit
-    .word do_lit, 32       ; ' '
-    .word do_emit
-    .word do_lit, 118      ; 'v'
-    .word do_emit
-    .word do_lit, 48       ; '0'
-    .word do_emit
-    .word do_lit, 46       ; '.'
-    .word do_emit
-    .word do_lit, 10       ; '\n' (inlined CR now that asm CR is gone)
-    .word do_emit
     .word do_exit
 
 ; ============================================================
