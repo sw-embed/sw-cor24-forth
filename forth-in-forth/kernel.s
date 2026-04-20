@@ -1522,7 +1522,7 @@ do_sw_fetch:
 ; ------------------------------------------------------------
 entry_dot:
     .word entry_sw_fetch
-    .byte 1
+    .byte 65              ; HIDDEN (bit 6) + length 1; Forth `.` in core/midlevel.fth
     .byte 46              ; "."
 do_dot:
     add r1, -3
