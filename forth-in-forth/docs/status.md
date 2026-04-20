@@ -54,6 +54,28 @@ written in Forth.
 **Net new vocabulary visible at the REPL**: 18 still defined (now in
 Forth) − 0 lost + 19 brand-new + 3 new asm primitives = **+22 names**.
 
+## Word counts: before vs. after
+
+| Category | Before today | After today | Δ |
+|---|---|---|---|
+| asm dictionary entries (`grep -c '^entry_' kernel.s`) | 65 | 50 | −15 |
+| of which HIDDEN (LIT, BRANCH, 0BRANCH originally) | 3 | 1 | −2 |
+| of which visible at REPL | 62 | 49 | −13 |
+| Forth colon defs (`grep -c '^: ' core/*.fth`) | 0 | 37 | +37 |
+| **Total vocabulary visible at REPL** | **62** | **86** | **+24** |
+
+Forth defs by tier:
+
+| Tier | Count | Words |
+|------|-------|-------|
+| minimal.fth | 9 | BEGIN UNTIL IF THEN ELSE `0=` `=` `(` `\` |
+| lowlevel.fth | 15 | NIP TUCK ROT -ROT 2DUP 2DROP 2SWAP 2OVER `0<` 1+ 1- NEGATE ABS `/` MOD |
+| midlevel.fth | 5 | CR SPACE HEX DECIMAL `.` |
+| highlevel.fth | 8 | DEPTH .S `'` PRINT-NAME WORDS VER >NAME SEE |
+
+The 3 new asm primitives added today (`[']`, `EOL!`, `SP@`) are
+counted in the asm row above.
+
 ## Line counts
 
 | File | Before subset 3 | Now |
