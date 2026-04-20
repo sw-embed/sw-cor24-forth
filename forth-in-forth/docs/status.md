@@ -126,8 +126,30 @@ which disappears into the 61M total.
 
 **Collision caveat**: first-char-only hash puts EMIT/EXIT in the
 same bucket, same for OVER/OR, etc. These pairs hit the linear
-fallback. Upgrading to a multiplicative hash (per `../../docs/hashing.txt`)
-would reduce collisions but not change the overall runtime picture.
+fallback.
+
+**Offline collision analysis** (`scripts/hash-collision-analysis.py`)
+over the 90 known dictionary words at 256 buckets:
+
+| Hash function | Collisions | Worst bucket |
+|---|---:|---:|
+| first_char (current) | 47 | 7 |
+| len+first+last | 34 | 5 |
+| len*31+first+last | 17 | 3 |
+| djb2 | 17 | 3 |
+| fnv1a | 17 | 3 |
+| **len-seeded mult33 (winner)** | **11** | **3** |
+
+Len-seeded mult33: `h = length; for c in name: h = h*33 + c; bucket = h & 0xFF`.
+
+Upgrading the kernel from first-char to mult33 is straightforward in
+principle (~30 lines of asm for a shared compute_hash subroutine with
+RS-based args) but has **not been implemented** because CLI
+measurements show the current first-char hash provides 0 measurable
+speedup to begin with — so a better-distributing hash is unlikely to
+show CLI gains either. The implementation is deferred until WASM
+testing confirms that hashing provides a meaningful wall-clock
+improvement in the browser.
 
 **Real bottleneck for future work**: if bootstrap speed becomes
 important, the paths worth optimizing are (a) `cor24-run --uart-input`
