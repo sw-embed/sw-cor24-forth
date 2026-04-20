@@ -73,55 +73,35 @@ ht_zero_loop:
     add r1, 3            ; pop end_addr
 
     ; Walk LATEST chain (newest→oldest). Set each bucket to the
-    ; NEWEST entry that hashes to it — only set a bucket if empty
-    ; (since we walk newest first). Uses compute_hash (len-seeded mult33).
+    ; NEWEST entry with that first char — i.e., only set a bucket
+    ; if it's currently empty (since we walk newest first).
     la r0, var_latest_val
     lw r0, 0(r0)        ; r0 = newest entry
 ht_pop_loop:
     ceq r0, z
     brt ht_pop_done
+    ; Compute slot_addr = dict_hash_table + 3 * first_char(entry)
     push r0              ; save entry on DS
-    ; hash_arg_ptr = entry + 4 (name start)
-    add r0, 4
-    la r2, hash_arg_ptr
-    sw r0, 0(r2)
-    ; hash_arg_len = (entry+3)[0] & 63 (mask flags bits)
-    pop r0               ; r0 = entry
-    push r0              ; put back on DS for later
-    lbu r0, 3(r0)        ; flags_len
-    lcu r2, 63
-    and r0, r2           ; length
-    la r2, hash_arg_len
-    sw r0, 0(r2)
-    ; return addr
-    la r2, hash_ret_addr
-    la r0, ht_pop_after_hash
-    sw r0, 0(r2)
-    la r0, compute_hash
-    jmp (r0)
-ht_pop_after_hash:
-    ; DS: [entry]. hash_result holds the bucket.
-    la r0, hash_result
-    lw r0, 0(r0)         ; r0 = bucket
-    lc r2, 3
-    mul r0, r2           ; r0 = bucket * 3
+    lbu r2, 4(r0)       ; r2 = first char (r0 = base, r2 = dest — separate regs)
+    lc r0, 3
+    mul r0, r2          ; r0 = 3 * first_char (offset into table)
     add r1, -3
-    sw r0, 0(r1)         ; stash offset on RS
+    sw r0, 0(r1)        ; RS: [offset, ...]
     la r0, dict_hash_table
-    lw r2, 0(r1)
+    lw r2, 0(r1)        ; r2 = offset
     add r1, 3
-    add r0, r2           ; r0 = slot addr
-    lw r2, 0(r0)         ; r2 = current slot
+    add r0, r2          ; r0 = slot addr
+    lw r2, 0(r0)        ; r2 = current slot value
     ceq r2, z
     brt ht_pop_set
     ; Slot already has a (newer-than-current) entry; skip.
     pop r0               ; restore entry
-    lw r0, 0(r0)         ; follow link
+    lw r0, 0(r0)        ; follow link
     bra ht_pop_loop
 ht_pop_set:
     pop r2               ; r2 = entry (from push r0)
-    sw r2, 0(r0)         ; *slot = entry
-    lw r0, 0(r2)         ; follow link
+    sw r2, 0(r0)        ; *slot = entry
+    lw r0, 0(r2)        ; follow link
     bra ht_pop_loop
 ht_pop_done:
 
@@ -942,35 +922,23 @@ do_find:
     add r1, -3
     sw r0, 0(r1)        ; save search_start RS: [ss, sl, ca, IP]
 
-    ; Load start entry via mult33 hash (fallback to LATEST on miss).
-    ; RS holds [ss, sl, ca, IP]; ss = name start, sl = length.
-    lw r0, 0(r1)         ; r0 = search_start
-    la r2, hash_arg_ptr
-    sw r0, 0(r2)
-    lw r0, 3(r1)         ; r0 = search_len
-    la r2, hash_arg_len
-    sw r0, 0(r2)
-    la r2, hash_ret_addr
-    la r0, find_after_hash
-    sw r0, 0(r2)
-    la r0, compute_hash
-    jmp (r0)
-find_after_hash:
-    la r0, hash_result
-    lw r0, 0(r0)         ; r0 = bucket
-    lc r2, 3
-    mul r0, r2           ; r0 = bucket * 3
+    ; Load start entry via hash (fallback to LATEST if bucket empty).
+    ; RS currently holds [ss, sl, ca, IP]; ss = name start (c-addr+1).
+    lw r0, 0(r1)        ; r0 = search_start
+    lbu r2, 0(r0)       ; r2 = first char of name (r0 preserved as base)
+    lc r0, 3
+    mul r0, r2          ; r0 = 3 * first_char
     add r1, -3
-    sw r0, 0(r1)
+    sw r0, 0(r1)        ; stash offset on RS
     la r0, dict_hash_table
-    lw r2, 0(r1)
+    lw r2, 0(r1)        ; r2 = offset
     add r1, 3
-    add r0, r2           ; r0 = slot addr
-    lw r0, 0(r0)         ; r0 = bucket entry (or 0)
+    add r0, r2          ; r0 = slot addr
+    lw r0, 0(r0)        ; r0 = bucket entry (or 0)
     ceq r0, z
     brf find_have_start
     la r2, var_latest_val
-    lw r0, 0(r2)         ; fallback: start at LATEST
+    lw r0, 0(r2)        ; fallback: start at LATEST
 find_have_start:
     push r0              ; DS: [entry]
 
@@ -1416,43 +1384,22 @@ create_copy_done:
     lw r2, 0(r1)        ; restore r2
     add r1, 3           ; RS: [IP]
 
-    ; Insert new_entry into FIND hash table (mult33 hash).
-    ; r0 holds new_entry; flags_len at r0+3 (length in low 6 bits);
-    ; name starts at r0+4.
+    ; Insert new_entry into FIND hash table (bucket = first char of name).
+    ; r0 still holds new_entry; first char is at new_entry+4.
     add r1, -3
     sw r0, 0(r1)        ; stash entry. RS: [entry, IP]
-    ; hash_arg_ptr = entry + 4
-    add r0, 4
-    la r2, hash_arg_ptr
-    sw r0, 0(r2)
-    ; hash_arg_len = flags_len & 63
-    lw r0, 0(r1)        ; r0 = entry
-    lbu r0, 3(r0)       ; r0 = flags_len
-    lcu r2, 63
-    and r0, r2
-    la r2, hash_arg_len
-    sw r0, 0(r2)
-    ; return addr
-    la r2, hash_ret_addr
-    la r0, create_after_hash
-    sw r0, 0(r2)
-    la r0, compute_hash
-    jmp (r0)
-create_after_hash:
-    ; RS: [entry, IP]. Read hash_result, compute slot addr, store entry.
-    la r0, hash_result
-    lw r0, 0(r0)         ; r0 = bucket
-    lc r2, 3
-    mul r0, r2           ; r0 = bucket * 3
+    lbu r2, 4(r0)       ; r2 = first char (separate dest)
+    lc r0, 3
+    mul r0, r2          ; r0 = 3 * first_char
     add r1, -3
-    sw r0, 0(r1)         ; RS: [offset, entry, IP]
+    sw r0, 0(r1)        ; RS: [offset, entry, IP]
     la r0, dict_hash_table
-    lw r2, 0(r1)
-    add r1, 3            ; pop offset
-    add r0, r2           ; r0 = slot addr
-    lw r2, 0(r1)         ; r2 = entry
-    sw r2, 0(r0)         ; *slot = entry
-    add r1, 3            ; pop entry. RS: [IP]
+    lw r2, 0(r1)        ; r2 = offset
+    add r1, 3           ; pop offset
+    add r0, r2          ; r0 = slot addr
+    lw r2, 0(r1)        ; r2 = entry
+    sw r2, 0(r0)        ; *slot = entry
+    add r1, 3           ; pop entry. RS: [IP]
 
     ; Restore IP and NEXT
     lw r2, 0(r1)
@@ -2300,84 +2247,6 @@ var_base_val:
     .word 10
 var_sp_base:
     .word 0             ; snapshot of initial sp taken at _start
-
-; ============================================================
-; compute_hash: len-seeded mult33 hash over a counted name.
-;
-; Inputs (via fixed memory cells):
-;   hash_arg_ptr — address of first name byte
-;   hash_arg_len — length of name (0-63)
-; Output:
-;   hash_result  — bucket index (0-255)
-; Control:
-;   hash_ret_addr must be set to the return address before jumping
-;   here. At end, the subroutine `jmp (hash_ret_addr)`.
-;
-; Algorithm: h = length; for each char: h = h*33 + char; bucket = h & 255.
-; 11 collisions on our 90-word dict at 256 buckets; see
-; scripts/hash-collision-analysis.py.
-; ============================================================
-compute_hash:
-    la r0, hash_arg_ptr
-    lw r0, 0(r0)         ; r0 = ptr
-    la r2, hash_arg_len
-    lw r2, 0(r2)         ; r2 = length
-    ; Save on RS: [remlen=length, ptr]
-    add r1, -3
-    sw r0, 0(r1)         ; RS: [ptr]
-    add r1, -3
-    sw r2, 0(r1)         ; RS: [remlen, ptr]
-    ; h = length (seed); keep in r0
-    mov r0, r2
-ch_loop:
-    lw r2, 0(r1)         ; r2 = remlen
-    ceq r2, z
-    brt ch_done
-    ; Save h, read char at ptr
-    add r1, -3
-    sw r0, 0(r1)         ; RS: [h, remlen, ptr]
-    lw r0, 6(r1)         ; r0 = ptr (at RS offset 6 after push)
-    lbu r2, 0(r0)        ; r2 = char
-    ; Restore h, compute h = h * 33 + char
-    lw r0, 0(r1)         ; r0 = h
-    add r1, 3            ; pop h. RS: [remlen, ptr]
-    add r1, -3
-    sw r2, 0(r1)         ; save char. RS: [char, remlen, ptr]
-    lc r2, 33
-    mul r0, r2           ; r0 = h * 33
-    lw r2, 0(r1)         ; r2 = char
-    add r0, r2           ; r0 = h*33 + char
-    add r1, 3            ; pop char. RS: [remlen, ptr]
-    ; Advance ptr
-    lw r2, 3(r1)
-    add r2, 1
-    sw r2, 3(r1)
-    ; Decrement remlen
-    lw r2, 0(r1)
-    add r2, -1
-    sw r2, 0(r1)
-    bra ch_loop
-ch_done:
-    ; r0 = final h; mask to 0-255
-    lcu r2, 255
-    and r0, r2
-    ; Store to hash_result, clean RS, return
-    la r2, hash_result
-    sw r0, 0(r2)
-    add r1, 6            ; pop [remlen, ptr]
-    la r2, hash_ret_addr
-    lw r2, 0(r2)
-    jmp (r2)
-
-; compute_hash's argument / return cells
-hash_arg_ptr:
-    .word 0
-hash_arg_len:
-    .word 0
-hash_ret_addr:
-    .word 0
-hash_result:
-    .word 0
 
 ; ============================================================
 ; FIND hash table: 256 buckets × 3 bytes = 768 bytes.
