@@ -2333,6 +2333,63 @@ do_sp_fetch:
     add r2, 3
     jmp (r0)
 
+; ------------------------------------------------------------
+; SP! ( addr -- ) : Set data stack pointer to addr. `pop r0` reads
+; addr first (from current TOS), then `mov sp, r0` installs it as
+; the new sp. Anything between the old sp and the new sp is now
+; "off stack"; the caller is responsible for having put addr
+; somewhere sensible (typically computed from SP@).
+; ------------------------------------------------------------
+entry_sp_store:
+    .word entry_sp_fetch
+    .byte 3
+    .byte 83, 80, 33        ; "SP!"
+do_sp_store:
+    pop r0               ; r0 = new sp
+    mov sp, r0           ; sp := new sp
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
+; RP@ ( -- addr ) : Push current return stack pointer (r1). Inside
+; a colon def, RP@ returns the address of the caller's saved IP
+; (because do_colon_cfa already pushed it). User code that said
+; `x >R` and then `RP@` will see r1 pointing at *that colon's*
+; saved IP, with x one cell deeper — so a Forth-level R@
+; is `: R@ RP@ 3 + @ ;` to skip past the nested-call's own IP.
+; ------------------------------------------------------------
+entry_rp_fetch:
+    .word entry_sp_store
+    .byte 3
+    .byte 82, 80, 64        ; "RP@"
+do_rp_fetch:
+    push r1              ; push r1 onto DS
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
+; RP! ( addr -- ) : Set return stack pointer (r1). Extremely
+; dangerous — next NEXT will read the IP of the current primitive
+; correctly (it's still in r2), but once this primitive returns to
+; a colon context, EXIT will read from the new r1 location. Use
+; only in matched pairs around RP manipulation.
+; ------------------------------------------------------------
+entry_rp_store:
+    .word entry_rp_fetch
+    .byte 3
+    .byte 82, 80, 33        ; "RP!"
+do_rp_store:
+    pop r0               ; r0 = new r1
+    mov r1, r0
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
 ; ============================================================
 ; `\` / `(` / IF / THEN / ELSE / BEGIN / UNTIL — moved to core/minimal.fth
 ; ============================================================
@@ -2346,7 +2403,7 @@ do_sp_fetch:
 ; the newline has been consumed via KEY.
 ; ------------------------------------------------------------
 entry_eol_store:
-    .word entry_sp_fetch    ; was entry_words; WORDS now in core/highlevel.fth
+    .word entry_rp_store    ; was entry_sp_fetch before SP!/RP@/RP! added
     .byte 4
     .byte 69, 79, 76, 33     ; "EOL!"
 do_eol_store:
