@@ -956,6 +956,31 @@ do_find:
     la r0, compute_hash
     jmp (r0)
 find_after_hash:
+    ; Lookaside fast path: if full 24-bit hash matches last cached
+    ; FIND result AND the cached cfa is non-zero, push (cfa, flag)
+    ; and return immediately.
+    la r0, hash_full
+    lw r0, 0(r0)              ; r0 = current 24-bit hash
+    la r2, lookaside_hash
+    lw r2, 0(r2)
+    ceq r0, r2
+    brf la_miss
+    la r0, lookaside_cfa
+    lw r0, 0(r0)
+    ceq r0, z
+    brt la_miss               ; cfa=0 means cache empty
+    push r0                   ; DS: [cfa]
+    la r0, lookaside_flag
+    lw r0, 0(r0)
+    push r0                   ; DS: [flag, cfa]
+    ; Clean up RS [ss, sl, ca, IP] — IP is at offset 9
+    lw r2, 9(r1)
+    add r1, 12                ; pop 4 cells
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+la_miss:
     la r0, hash_result
     lw r0, 0(r0)         ; r0 = bucket
     lc r2, 3
@@ -1125,6 +1150,19 @@ find_normal:
     lc r0, -1            ; normal → flag = -1
 find_push_flag:
     push r0              ; DS: [flag, CFA]
+
+    ; Update lookaside cache (peek DS via fp, no pops).
+    mov fp, sp
+    lw r0, 0(fp)         ; r0 = flag (top)
+    la r2, lookaside_flag
+    sw r0, 0(r2)
+    lw r0, 3(fp)         ; r0 = CFA (second)
+    la r2, lookaside_cfa
+    sw r0, 0(r2)
+    la r0, hash_full
+    lw r0, 0(r0)
+    la r2, lookaside_hash
+    sw r0, 0(r2)
 
     ; Restore IP and NEXT
     lw r2, 0(r1)
@@ -2369,6 +2407,10 @@ ch_loop:
     sw r2, 0(r1)
     bra ch_loop
 ch_done:
+    ; Save 24-bit hash for lookaside cache (before masking)
+    la r2, hash_full
+    sw r0, 0(r2)
+    ; Mask to 8-bit bucket index
     lcu r2, 255
     and r0, r2
     la r2, hash_result
@@ -2387,6 +2429,23 @@ hash_ret_addr:
     .word 0
 hash_result:
     .word 0
+hash_full:
+    .word 0            ; 24-bit pre-mask hash (for lookaside cache key)
+
+; ============================================================
+; FIND lookaside cache (single entry, memento-pattern).
+; Avoids the bucket-lookup + name-compare path for repeated-word
+; lookups common in colon-def compilation. Key is the full 24-bit
+; XMX hash (effectively collision-free for our dict; worst case =
+; false positive that returns wrong CFA, mitigated by the high
+; entropy of XMX).
+; ============================================================
+lookaside_hash:
+    .word 0            ; 24-bit hash of cached name
+lookaside_cfa:
+    .word 0            ; cfa of cached entry; 0 = cache empty / invalid
+lookaside_flag:
+    .word 0            ; 1 = IMMEDIATE, -1 = normal
 
 ; ============================================================
 ; FIND hash table: 256 buckets × 3 bytes = 768 bytes.
