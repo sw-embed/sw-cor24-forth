@@ -1618,10 +1618,24 @@ do_semi:
     jmp (r0)
 
 ; ------------------------------------------------------------
+; ,DOCOL ( -- ) : Emit the 6-byte far-CFA template at HERE,
+; advance HERE by 6. Exposes the colon-def CFA template that asm `:`
+; uses internally (do_colon_cfa) so Forth-defined `:` in
+; core/runtime.fth can build new colon headers without asm support.
+; ------------------------------------------------------------
+entry_comma_docol:
+    .word entry_semi
+    .byte 6
+    .byte 44, 68, 79, 67, 79, 76    ; ",DOCOL"
+do_comma_docol:
+    la r0, do_colon_cfa
+    jmp (r0)
+
+; ------------------------------------------------------------
 ; IMMEDIATE ( -- ) : Toggle IMMEDIATE flag on most recent word
 ; ------------------------------------------------------------
 entry_immediate:
-    .word entry_semi
+    .word entry_comma_docol
     .byte 9
     .byte 73, 77, 77, 69, 68, 73, 65, 84, 69
 do_immediate:

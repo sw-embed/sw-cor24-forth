@@ -7,7 +7,7 @@ Last updated: 2026-04-20
 | Subset | Description | State | Commit |
 |--------|-------------|-------|--------|
 | 12 | Scaffold (kernel + core copies, scripts, docs, reg-rs baseline) | done | (this commit) |
-| 13 | `,DOCOL` primitive + move `:` and `;` to Forth | pending | — |
+| 13 | `,DOCOL` primitive added; Forth `:`/`;` blocked by SMUDGE issue | partial | (this work) |
 | 14 | Stack ops via `SP@`/`SP!`/`RP@`/`RP!` | pending | — |
 | 15 | `NAND` primitive; derive `AND`/`OR`/`XOR`/`INVERT` | pending | — |
 | 16 | `*`/`/MOD`/`-` as Forth loops | pending | — |
