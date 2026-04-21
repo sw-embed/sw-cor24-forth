@@ -157,6 +157,26 @@ delivery rate, or (b) re-promoting heavily-called IMMEDIATE words
 (like `\` and `(`) to asm primitives — that'd claw back several ×
 more instructions than any FIND change.
 
+### Hash-function iterations (commits a3a63f0 → 4ea2f79)
+
+| Commit | Change | CLI time (fib) | Collisions (256b) |
+|---|---|---|---:|
+| a3a63f0 | first_char hash | 61.17M cycles | 47 |
+| 9bd4b10 | len-seeded mult33 | 61.17M | 11 |
+| fdae7dd | 2-Round XMX | 61.17M | 15 |
+| 4ea2f79 | XMX + 1-entry lookaside cache | 61.17M | 15 |
+
+**All four land at IDENTICAL CLI instruction count** (within the
+simulator's 10K-cycle timestamp granularity). The CLI infrastructure
+can't resolve the expected small savings (~1% per step). The
+motivation is **wall-clock time in WASM** where:
+- per-instruction cost is 10–50× higher than native,
+- millisecond-level timing resolution is available, and
+- user-visible boot latency matters.
+
+Full analysis with per-hash collision tables, algorithm descriptions,
+and per-char asm cost: [`../../docs/hashing-analysis.md`](../../docs/hashing-analysis.md).
+
 ## Known cosmetic differences
 
 - Forth `.S` prints `<N >` (extra space before `>`) instead of asm's

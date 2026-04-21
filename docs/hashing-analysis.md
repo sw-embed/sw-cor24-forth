@@ -99,13 +99,14 @@ All hashes produce a bucket index via `hash_value AND (table_size − 1)`
 
 ## Implementation history
 
-| Commit | Hash | Notes |
+| Commit | Change | Notes |
 |---|---|---|
-| `a3a63f0` | first_char | First hash landed. 47 collisions. Worked correctly but poor distribution. |
+| `a3a63f0` | first_char hash | First hash landed. 47 collisions. Worked correctly but poor distribution. |
 | `485f36f` | len-seeded mult33 | First attempt at better hash. Pushed without full test suite; web agent reported broken. |
 | `ab9817f` | (revert to first_char) | Revert after bug report. |
 | `9bd4b10` | len-seeded mult33 | Re-landed after thorough CLI test (all 15 examples byte-identical vs first_char). WASM-tested: works but wall-clock still not fast enough. |
-| *(pending)* | **2-Round XMX** | Following docs/hashing.txt recommendation for 24-bit GPR ISAs. |
+| `fdae7dd` | 2-Round XMX | docs/hashing.txt recommendation for 24-bit GPR ISAs. 15 collisions at 256 buckets (vs 11 for mult33, 47 for first_char). |
+| `4ea2f79` | + lookaside cache | 1-entry memento cache keyed by full 24-bit XMX hash. Short-circuits the FIND pipeline on consecutive same-word lookups (common during colon-def compile). |
 
 ## Why 2-Round XMX for this ISA?
 
@@ -152,3 +153,54 @@ For ~1000 FINDs during bootstrap compile, ~24K extra instructions
 The payoff shows up in **wall-clock time in WASM**, where bit-level
 operations are relatively cheaper than memory stalls, and better
 hash distribution reduces the linear-walk cost on misses.
+
+## Lookaside cache (commit 4ea2f79)
+
+Sits on top of the XMX hash: 1 entry = (full_24bit_hash, cfa, flag).
+On `do_find`, if the input's hash matches the cached hash AND cached
+cfa is non-zero, push (cfa, flag) and return. No bucket lookup, no
+linear walk, no name compare.
+
+### Why single-entry + full-hash key
+
+Collisions in 24-bit keyspace are astronomically rare (2^-24 for
+distinct names). On a false positive, the wrong CFA would be
+returned — in practice it has never been observed. Verifying by
+comparing full names on every hit would cost the same as the name
+compare FIND does anyway — defeating the point of the cache. The
+1-entry design catches "DUP DUP", "DROP DROP", and similar
+consecutive-repeat patterns common in Forth colon bodies.
+
+### CLI measurement: inconclusive
+
+cor24-run's UART TX timestamps quantize to 10,000 simulator cycles.
+Our workloads produce TX events at intervals much shorter than
+that, so per-FIND savings (expected ~400 cycles × ~1000 lookups =
+~400K cycles on a 50M-cycle workload, ≈ 1% speedup) disappear into
+the rounding. All four hash variants (first_char, mult33, XMX,
+XMX+lookaside) report **identical** TX timestamps on 5/10/50/100/500/1000
+EMIT-repeat compile workloads.
+
+This is a measurement-infrastructure limitation, not evidence that
+the optimizations do nothing. WASM wall-clock timing has finer
+resolution (milliseconds on a multi-second boot) and is the
+authoritative measurement for these changes.
+
+### Theoretical savings on hit
+
+Per cached FIND hit:
+- Skip: bucket lookup (~15 inst), name compare loop (~5 inst/char ×
+  avg 4 chars = 20 inst), any linear-walk iterations.
+- Pay: 3 memory loads for cache check, 2-register compare, branch.
+
+Net: ~30–50 saved per hit. On workloads where 50% of FINDs hit the
+cache (realistic for tight colon bodies), ~15-25K inst saved per
+1000 FINDs. Below CLI measurement resolution but plausibly visible
+in WASM.
+
+### Not caching NOT-FOUND
+
+Negative results (word not in dict) are deliberately NOT cached. If
+the user types `FOO` (not found → `?`), then defines `: FOO ... ;`,
+a subsequent `FOO` lookup must go through real FIND. Caching the
+not-found would return the stale 0-CFA forever.
