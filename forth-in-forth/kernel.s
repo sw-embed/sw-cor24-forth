@@ -2329,11 +2329,137 @@ tick_word_cfa:
     .word do_comma       ; compile the CFA that was on DS
     .word do_exit
 
+; ============================================================
+; DO/LOOP runtime primitives (used by IMMEDIATE DO/LOOP/?DO in
+; core/midlevel.fth). RS layout while inside a DO-loop body:
+;   top:       [ index        ]
+;              [ limit        ]
+;   deeper:    [ caller's IP  ]
+; So EXIT inside a loop corrupts the return unless UNLOOP runs
+; first. That matches standard Forth.
+; ============================================================
+
+; (DO) ( limit start -- )  ( R: -- limit index )
+entry_paren_do:
+    .word entry_tick
+    .byte 4
+    .byte 40, 68, 79, 41        ; "(DO)"
+do_paren_do:
+    ; DS: ( limit start -- ). Reserve 2 RS cells, write index
+    ; (from start) at 0(r1) and limit at 3(r1). We pop start first
+    ; so it goes in as index; then pop limit above it. `sw fp` isn't
+    ; available on this ISA, so we only write through r0.
+    pop r0                   ; r0 = start
+    add r1, -6               ; reserve limit+index on RS
+    sw r0, 0(r1)             ; index (=start)
+    pop r0                   ; r0 = limit
+    sw r0, 3(r1)             ; limit
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; (LOOP) — thread: [do_paren_loop][offset]
+; Increment index, compare against limit:
+;   == → drop limit+index, skip offset, fall through
+;   != → write new index, IP += offset (branch back)
+entry_paren_loop:
+    .word entry_paren_do
+    .byte 6
+    .byte 40, 76, 79, 79, 80, 41    ; "(LOOP)"
+do_paren_loop:
+    ; RS: [index][limit][caller IP]. Stash IP in fp via push/pop so
+    ; r2 is free as a scratch compare register (ceq on this ISA needs
+    ; both operands to be r0/r1/r2/z).
+    push r2
+    pop fp                   ; fp = saved IP
+    lw r0, 0(r1)             ; r0 = index
+    add r0, 1
+    sw r0, 0(r1)             ; write new index back
+    lw r2, 3(r1)             ; r2 = limit
+    ceq r0, r2               ; C = (new index == limit)
+    brt ploop_done
+    push fp
+    pop r2                   ; restore IP
+    lw r0, 0(r2)             ; r0 = signed back-offset
+    add r2, r0
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+ploop_done:
+    push fp
+    pop r2                   ; restore IP
+    add r1, 6                ; drop limit+index from RS
+    add r2, 3                ; skip offset cell
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; (?DO) ( limit start -- )  ( R: -- [limit index] )
+; Thread: [do_paren_qdo][fwd_offset]
+; If start == limit: skip loop body (IP += fwd_offset).
+; Else: push limit+index to RS, skip the fwd_offset cell, fall through.
+entry_paren_qdo:
+    .word entry_paren_loop
+    .byte 5
+    .byte 40, 63, 68, 79, 41    ; "(?DO)"
+do_paren_qdo:
+    ; DS: ( limit start -- ). Same ISA constraints as (LOOP): we stash
+    ; IP in fp so r0 and r2 are both free for the compare.
+    push r2
+    pop fp                   ; fp = saved IP
+    pop r0                   ; r0 = start
+    pop r2                   ; r2 = limit
+    ceq r0, r2
+    brt qdo_skip
+    add r1, -3
+    sw r2, 0(r1)             ; push limit
+    add r1, -3
+    sw r0, 0(r1)             ; push index (=start)
+    push fp
+    pop r2                   ; restore IP
+    add r2, 3                ; skip fwd_offset
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+qdo_skip:
+    push fp
+    pop r2                   ; restore IP
+    lw r0, 0(r2)             ; r0 = fwd_offset
+    add r2, r0
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; I ( -- index )  push current loop index (RS top).
+entry_i:
+    .word entry_paren_qdo
+    .byte 1
+    .byte 73                 ; "I"
+do_i:
+    lw r0, 0(r1)
+    push r0
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; UNLOOP ( -- )  ( R: limit index -- )  drop loop state from RS,
+; restoring the caller's IP to RS top. Must precede EXIT inside
+; a DO-loop.
+entry_unloop:
+    .word entry_i
+    .byte 6
+    .byte 85, 78, 76, 79, 79, 80    ; "UNLOOP"
+do_unloop:
+    add r1, 6
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
 ; ------------------------------------------------------------
 ; BYE ( -- ) : Halt the CPU
 ; ------------------------------------------------------------
 entry_bye:
-    .word entry_tick
+    .word entry_unloop
     .byte 3
     .byte 66, 89, 69        ; "BYE"
 do_bye:

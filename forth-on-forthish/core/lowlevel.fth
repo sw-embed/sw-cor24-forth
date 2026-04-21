@@ -34,3 +34,22 @@
 \ so the address pushed is HERE+9 at definition time (LIT=3, addr=3, EXIT=3).
 : CONSTANT  CREATE ,DOCOL ['] LIT , , ['] EXIT , ;
 : VARIABLE  CREATE ,DOCOL HERE @ 9 + ['] LIT , , ['] EXIT , 0 , ;
+
+\ ---- DO / LOOP / ?DO — IMMEDIATE compilers for the (DO)/(LOOP)/(?DO)
+\ primitives. Compile-stack convention during a DO-loop definition:
+\   ( body-addr  patch-addr-or-0 )   with patch-addr != 0 only for ?DO.
+\ LOOP compiles the backward branch, then patches the forward branch
+\ reserved by ?DO if present. DO reserves no forward branch, so it
+\ leaves a 0 marker that LOOP's IF/ELSE handles.
+: DO    ['] (DO) , HERE @ 0 ; IMMEDIATE
+: ?DO   ['] (?DO) , HERE @ 0 , HERE @ SWAP ; IMMEDIATE
+: LOOP
+  ['] (LOOP) ,
+  OVER HERE @ - ,                 \ backward offset to body
+  DUP IF
+    HERE @ OVER - SWAP !          \ patch ?DO's forward branch
+  ELSE
+    DROP
+  THEN
+  DROP
+; IMMEDIATE
