@@ -204,3 +204,12 @@ Negative results (word not in dict) are deliberately NOT cached. If
 the user types `FOO` (not found → `?`), then defines `: FOO ... ;`,
 a subsequent `FOO` lookup must go through real FIND. Caching the
 not-found would return the stale 0-CFA forever.
+
+## (d) Pre-compiled dictionary image — DEFERRED
+
+See [`plan.md`](plan.md) for the deferral rationale. Summary:
+biggest expected WASM speedup (10s → 100ms boot), but heavy
+investment (~200 asm lines + Python build tool + script changes).
+Aligns with phase 4 (`forth-from-forth/`) deliverables, so the
+effort is better spent on the cross-compiler unless WASM boot
+with (a)+(b)+(c) proves insufficient first.

@@ -53,6 +53,79 @@ _start:
     sw r2, 0(r0)        ; HERE = first free byte
 
     ; ============================================================
+    ; Populate the FIND hash table (256 buckets, indexed by first
+    ; char of name). Each bucket holds the most-recent entry whose
+    ; name starts with that byte. See do_find / do_create for use.
+    ; ============================================================
+    ; Zero table (256 × 3 bytes = 768 bytes).
+    ; Stash end-address on RS; r0 = ptr, r2 = value (0) each iter.
+    la r2, dict_hash_table_end
+    add r1, -3
+    sw r2, 0(r1)         ; RS: [end_addr]
+    la r0, dict_hash_table
+ht_zero_loop:
+    lc r2, 0
+    sw r2, 0(r0)         ; slot = 0
+    add r0, 3
+    lw r2, 0(r1)         ; r2 = end_addr
+    clu r0, r2
+    brt ht_zero_loop
+    add r1, 3            ; pop end_addr
+
+    ; Walk LATEST chain (newest→oldest). Set each bucket to the
+    ; NEWEST entry that hashes to it — only set a bucket if empty
+    ; (since we walk newest first). Uses compute_hash (len-seeded mult33).
+    la r0, var_latest_val
+    lw r0, 0(r0)        ; r0 = newest entry
+ht_pop_loop:
+    ceq r0, z
+    brt ht_pop_done
+    push r0              ; save entry on DS
+    ; hash_arg_ptr = entry + 4 (name start)
+    add r0, 4
+    la r2, hash_arg_ptr
+    sw r0, 0(r2)
+    ; hash_arg_len = (entry+3)[0] & 63 (mask flags bits)
+    pop r0               ; r0 = entry
+    push r0              ; put back on DS for later
+    lbu r0, 3(r0)        ; flags_len
+    lcu r2, 63
+    and r0, r2           ; length
+    la r2, hash_arg_len
+    sw r0, 0(r2)
+    ; return addr
+    la r2, hash_ret_addr
+    la r0, ht_pop_after_hash
+    sw r0, 0(r2)
+    la r0, compute_hash
+    jmp (r0)
+ht_pop_after_hash:
+    ; DS: [entry]. hash_result holds the bucket.
+    la r0, hash_result
+    lw r0, 0(r0)         ; r0 = bucket
+    lc r2, 3
+    mul r0, r2           ; r0 = bucket * 3
+    add r1, -3
+    sw r0, 0(r1)         ; stash offset on RS
+    la r0, dict_hash_table
+    lw r2, 0(r1)
+    add r1, 3
+    add r0, r2           ; r0 = slot addr
+    lw r2, 0(r0)         ; r2 = current slot
+    ceq r2, z
+    brt ht_pop_set
+    ; Slot already has a (newer-than-current) entry; skip.
+    pop r0               ; restore entry
+    lw r0, 0(r0)         ; follow link
+    bra ht_pop_loop
+ht_pop_set:
+    pop r2               ; r2 = entry (from push r0)
+    sw r2, 0(r0)         ; *slot = entry
+    lw r0, 0(r2)         ; follow link
+    bra ht_pop_loop
+ht_pop_done:
+
+    ; ============================================================
     ; Launch threaded code tests (Phase 2 + Phase 3)
     ; ============================================================
     la r2, test_thread  ; IP = start of test thread
@@ -869,9 +942,61 @@ do_find:
     add r1, -3
     sw r0, 0(r1)        ; save search_start RS: [ss, sl, ca, IP]
 
-    ; Load LATEST and push on DS for find_loop
-    la r0, var_latest_val
+    ; Load start entry via mult33 hash (fallback to LATEST on miss).
+    ; RS holds [ss, sl, ca, IP]; ss = name start, sl = length.
+    lw r0, 0(r1)         ; r0 = search_start
+    la r2, hash_arg_ptr
+    sw r0, 0(r2)
+    lw r0, 3(r1)         ; r0 = search_len
+    la r2, hash_arg_len
+    sw r0, 0(r2)
+    la r2, hash_ret_addr
+    la r0, find_after_hash
+    sw r0, 0(r2)
+    la r0, compute_hash
+    jmp (r0)
+find_after_hash:
+    ; Lookaside fast path: if full 24-bit hash matches last cached
+    ; FIND result AND the cached cfa is non-zero, push (cfa, flag)
+    ; and return immediately.
+    la r0, hash_full
+    lw r0, 0(r0)              ; r0 = current 24-bit hash
+    la r2, lookaside_hash
+    lw r2, 0(r2)
+    ceq r0, r2
+    brf la_miss
+    la r0, lookaside_cfa
     lw r0, 0(r0)
+    ceq r0, z
+    brt la_miss               ; cfa=0 means cache empty
+    push r0                   ; DS: [cfa]
+    la r0, lookaside_flag
+    lw r0, 0(r0)
+    push r0                   ; DS: [flag, cfa]
+    ; Clean up RS [ss, sl, ca, IP] — IP is at offset 9
+    lw r2, 9(r1)
+    add r1, 12                ; pop 4 cells
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+la_miss:
+    la r0, hash_result
+    lw r0, 0(r0)         ; r0 = bucket
+    lc r2, 3
+    mul r0, r2           ; r0 = bucket * 3
+    add r1, -3
+    sw r0, 0(r1)
+    la r0, dict_hash_table
+    lw r2, 0(r1)
+    add r1, 3
+    add r0, r2           ; r0 = slot addr
+    lw r0, 0(r0)         ; r0 = bucket entry (or 0)
+    ceq r0, z
+    brf find_have_start
+    la r2, var_latest_val
+    lw r0, 0(r2)         ; fallback: start at LATEST
+find_have_start:
     push r0              ; DS: [entry]
 
 find_loop:
@@ -1025,6 +1150,19 @@ find_normal:
     lc r0, -1            ; normal → flag = -1
 find_push_flag:
     push r0              ; DS: [flag, CFA]
+
+    ; Update lookaside cache (peek DS via fp, no pops).
+    mov fp, sp
+    lw r0, 0(fp)         ; r0 = flag (top)
+    la r2, lookaside_flag
+    sw r0, 0(r2)
+    lw r0, 3(fp)         ; r0 = CFA (second)
+    la r2, lookaside_cfa
+    sw r0, 0(r2)
+    la r0, hash_full
+    lw r0, 0(r0)
+    la r2, lookaside_hash
+    sw r0, 0(r2)
 
     ; Restore IP and NEXT
     lw r2, 0(r1)
@@ -1315,6 +1453,44 @@ create_copy_done:
     sw r0, 0(r2)        ; LATEST = new_entry
     lw r2, 0(r1)        ; restore r2
     add r1, 3           ; RS: [IP]
+
+    ; Insert new_entry into FIND hash table (mult33 hash).
+    ; r0 holds new_entry; flags_len at r0+3 (length in low 6 bits);
+    ; name starts at r0+4.
+    add r1, -3
+    sw r0, 0(r1)        ; stash entry. RS: [entry, IP]
+    ; hash_arg_ptr = entry + 4
+    add r0, 4
+    la r2, hash_arg_ptr
+    sw r0, 0(r2)
+    ; hash_arg_len = flags_len & 63
+    lw r0, 0(r1)        ; r0 = entry
+    lbu r0, 3(r0)       ; r0 = flags_len
+    lcu r2, 63
+    and r0, r2
+    la r2, hash_arg_len
+    sw r0, 0(r2)
+    ; return addr
+    la r2, hash_ret_addr
+    la r0, create_after_hash
+    sw r0, 0(r2)
+    la r0, compute_hash
+    jmp (r0)
+create_after_hash:
+    ; RS: [entry, IP]. Read hash_result, compute slot addr, store entry.
+    la r0, hash_result
+    lw r0, 0(r0)         ; r0 = bucket
+    lc r2, 3
+    mul r0, r2           ; r0 = bucket * 3
+    add r1, -3
+    sw r0, 0(r1)         ; RS: [offset, entry, IP]
+    la r0, dict_hash_table
+    lw r2, 0(r1)
+    add r1, 3            ; pop offset
+    add r0, r2           ; r0 = slot addr
+    lw r2, 0(r1)         ; r2 = entry
+    sw r2, 0(r0)         ; *slot = entry
+    add r1, 3            ; pop entry. RS: [IP]
 
     ; Restore IP and NEXT
     lw r2, 0(r1)
@@ -2162,6 +2338,154 @@ var_base_val:
     .word 10
 var_sp_base:
     .word 0             ; snapshot of initial sp taken at _start
+
+; ============================================================
+; compute_hash: 2-Round 24-bit XMX hash over a counted name.
+;
+; Per docs/hashing.txt's recommendation for 24-bit GPR ISAs.
+; Per character:
+;   h = h XOR char
+;   h = h * MAGIC        ; 24-bit truncation is native (mul)
+;   h = h XOR (h SRL 12) ; spread high bits into low
+; bucket = h & 0xFF
+;
+; MAGIC = 0xDEADB5 = 14,592,437
+;
+; Inputs via fixed memory cells:
+;   hash_arg_ptr — address of first name byte
+;   hash_arg_len — length of name (0-63)
+; Output:
+;   hash_result  — bucket index (0-255)
+; Control:
+;   hash_ret_addr — caller sets; subroutine jumps to this on exit
+;
+; Collision count on our 90-word dict at 256 buckets: 15
+; (vs 11 for len-seeded mult33, 47 for first_char).
+; See scripts/hash-collision-analysis.py and docs/hashing-analysis.md.
+; ============================================================
+compute_hash:
+    la r0, hash_arg_ptr
+    lw r0, 0(r0)         ; r0 = ptr
+    la r2, hash_arg_len
+    lw r2, 0(r2)         ; r2 = length
+    add r1, -3
+    sw r0, 0(r1)         ; RS: [ptr]
+    add r1, -3
+    sw r2, 0(r1)         ; RS: [remlen, ptr]
+    ; h = 0 (XMX starts with no seed)
+    lc r0, 0
+ch_loop:
+    lw r2, 0(r1)         ; r2 = remlen
+    ceq r2, z
+    brt ch_done
+    ; Save h, read char at ptr
+    add r1, -3
+    sw r0, 0(r1)         ; RS: [h, remlen, ptr]
+    lw r0, 6(r1)         ; r0 = ptr (at RS offset 6)
+    lbu r2, 0(r0)        ; r2 = char
+    lw r0, 0(r1)         ; r0 = h
+    add r1, 3            ; pop h. RS: [remlen, ptr]
+
+    ; XMX round: h = (h ^ char) * MAGIC; h ^= h >> 12
+    xor r0, r2           ; r0 = h ^ char
+    la r2, 14592437      ; r2 = MAGIC = 0xDEADB5
+    mul r0, r2           ; r0 = (h^char) * MAGIC, 24-bit truncated
+    add r1, -3
+    sw r0, 0(r1)         ; stash h on RS
+    la r2, 12
+    srl r0, r2           ; r0 = h >> 12
+    lw r2, 0(r1)         ; r2 = h (pre-shift)
+    add r1, 3            ; pop
+    xor r0, r2           ; r0 = h ^ (h >> 12)
+
+    ; Advance ptr, decrement remlen
+    lw r2, 3(r1)
+    add r2, 1
+    sw r2, 3(r1)
+    lw r2, 0(r1)
+    add r2, -1
+    sw r2, 0(r1)
+    bra ch_loop
+ch_done:
+    ; Save 24-bit hash for lookaside cache (before masking)
+    la r2, hash_full
+    sw r0, 0(r2)
+    ; Mask to 8-bit bucket index
+    lcu r2, 255
+    and r0, r2
+    la r2, hash_result
+    sw r0, 0(r2)
+    add r1, 6            ; pop [remlen, ptr]
+    la r2, hash_ret_addr
+    lw r2, 0(r2)
+    jmp (r2)
+
+; compute_hash's argument / return cells
+hash_arg_ptr:
+    .word 0
+hash_arg_len:
+    .word 0
+hash_ret_addr:
+    .word 0
+hash_result:
+    .word 0
+hash_full:
+    .word 0            ; 24-bit pre-mask hash (for lookaside cache key)
+
+; ============================================================
+; FIND lookaside cache (single entry, memento-pattern).
+; Avoids the bucket-lookup + name-compare path for repeated-word
+; lookups common in colon-def compilation. Key is the full 24-bit
+; XMX hash (effectively collision-free for our dict; worst case =
+; false positive that returns wrong CFA, mitigated by the high
+; entropy of XMX).
+; ============================================================
+lookaside_hash:
+    .word 0            ; 24-bit hash of cached name
+lookaside_cfa:
+    .word 0            ; cfa of cached entry; 0 = cache empty / invalid
+lookaside_flag:
+    .word 0            ; 1 = IMMEDIATE, -1 = normal
+
+; ============================================================
+; FIND hash table: 256 buckets × 3 bytes = 768 bytes.
+; Bucket[c] holds the most-recent dict entry whose name starts
+; with byte c. Populated at _start; maintained by do_create.
+; ============================================================
+dict_hash_table:
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+    .word 0, 0, 0, 0, 0, 0, 0, 0
+dict_hash_table_end:
 
     .word do_exit
 

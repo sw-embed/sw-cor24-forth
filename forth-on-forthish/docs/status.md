@@ -19,8 +19,9 @@ Last updated: 2026-04-20
 
 ## Starting state (subset 12)
 
-The kernel is a verbatim copy of `./forth-in-forth/kernel.s` and the
-core/*.fth files are verbatim copies of `./forth-in-forth/core/*.fth`.
+The kernel is a copy of `./forth-in-forth/kernel.s` (carries the
+FIND hash + lookaside cache work from commits a3a63f0..4ea2f79) and
+the core/*.fth files are verbatim copies of `./forth-in-forth/core/*.fth`.
 This means `forth-on-forthish/scripts/demo.sh examples/14-fib.fth`
 produces identical output to `forth-in-forth/scripts/demo.sh
 examples/14-fib.fth` — `1 1 2 3 5 8 13 21 34 55 89` — captured as
