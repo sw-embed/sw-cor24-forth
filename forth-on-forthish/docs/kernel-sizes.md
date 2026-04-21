@@ -12,7 +12,8 @@ summed Forth source lines for `runtime/minimal/lowlevel/midlevel/highlevel`.
 | 92cef7f | #2 part 2 (DO/LOOP/?DO/I/UNLOOP) | 2758 | +128 | 4099 | 251 | 5 new counted-loop primitives |
 | 3dc723b | **subset 14A** (SP!/RP@/RP! primitives) | 2815 | +57 | 4130 | 251 | prerequisite for 14B |
 | 16265d8 | **subset 14B** (DUP/DROP/SWAP/OVER/R@ → Forth) | 2718 | −97 | 4102 | 256 | deleted 5 asm dict entries, 4 asm bodies (do_drop body kept — `[']` uses it), deleted dead test threads (do_dup's last caller) |
-| *current* | **subset 15** (NAND prim, AND/OR/XOR/INVERT → Forth) | 2685 | −33 | 4061 | 260 | deleted 3 asm ALU primitives (~51 lines), added NAND primitive (~20 lines), added 4 Forth colon defs in runtime.fth |
+| 0600ff9 | **subset 15** (NAND prim, AND/OR/XOR/INVERT → Forth) | 2685 | −33 | 4061 | 260 | deleted 3 asm ALU primitives (~51 lines), added NAND primitive (~20 lines), added 4 Forth colon defs in runtime.fth |
+| *current* | **subset 16** (`*`, `-`, `/MOD` → Forth) | 2617 | −68 | 3971 | 263 | deleted 3 asm arithmetic primitives (~69 lines). Kept `+` (asm; used everywhere). NEGATE moved to runtime.fth (needs INVERT). `*` = repeated-add loop, `/MOD` = repeated-subtract loop — slower than the `mul`/division-loop asm but within fib's 800M-instruction budget |
 
 **14A + 14B net**: +57 − 97 = **−40 lines** of asm. Five stack ops now live
 in 5 lines of `core/runtime.fth` (DUP, DROP, OVER, SWAP, R@ each one line).
@@ -23,7 +24,10 @@ identities: `INVERT = DUP NAND`; `AND = NAND INVERT`; `OR = INVERT SWAP
 INVERT NAND` (DeMorgan); `XOR = OVER OVER NAND DUP >R NAND SWAP R> NAND
 NAND` (4-NAND XOR).
 
-**Cumulative 14+15 savings**: −73 asm lines across one milestone.
+**Cumulative 14+15 savings**: −73 asm lines.
+
+**Cumulative 14+15+16 savings**: −141 asm lines (−5.1% from the 2758-line
+pre-14 baseline). Core Forth tier grew from 251 to 263 lines (+12).
 
 ## Plan's claimed per-subset savings vs. actual
 
@@ -33,7 +37,7 @@ From `docs/plan.md` estimates:
 |--------|-----------:|----------------:|-------|
 | 14 (stack ops via SP@/SP!/RP@/RP!) | ~150 | **−40** | Plan overestimated. `do_drop` stays (used by `[']`); `>R`/`R>` stay (they need atomic r1/r2 manipulation that Forth can't express). New SP!/RP@/RP! prims add 57 lines. |
 | 15 (NAND → derive AND/OR/XOR/INVERT) | ~75 | **−33** | Plan overestimated again. NAND prim is 20 lines; the three removed ALU primitives were ~51 lines (17 lines each). Forth defs fit in 4 one-liners. |
-| 16 (`*`/`/MOD`/`-` as Forth loops) | ~80 | TBD | |
+| 16 (`*`/`/MOD`/`-` as Forth loops) | ~80 | **−68** | Closest to plan so far. Three asm primitives (`*` 17, `-` 17, `/MOD` 35) went out; `+` stayed. Runtime cost: fib demo bumps from ~8.2s → ~8.5s (within budget). |
 | 17 (`WORD` to Forth, + `WORD-BUFFER` prim) | ~150 | TBD | |
 | 18 (`FIND` to Forth) | ~200 | TBD | With XMX hash + lookaside, FIND is intricate — savings uncertain |
 | 19 (`NUMBER` to Forth) | ~220 | TBD | |

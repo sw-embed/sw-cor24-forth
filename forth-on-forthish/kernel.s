@@ -313,87 +313,19 @@ do_plus:
     add r2, 3
     jmp (r0)
 
-; * ( n1 n2 -- n1*n2 )
-entry_star:
-    .word entry_plus
-    .byte 1
-    .byte 42
-do_star:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP
-    pop r2               ; r2 = n2
-    pop r0               ; r0 = n1
-    mul r0, r2           ; r0 = n1 * n2
-    push r0
-    lw r2, 0(r1)        ; restore IP
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; - ( n1 n2 -- n1-n2 )
-entry_minus:
-    .word entry_star
-    .byte 1
-    .byte 45
-do_minus:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP
-    pop r2               ; r2 = n2
-    pop r0               ; r0 = n1
-    sub r0, r2           ; r0 = n1 - n2
-    push r0
-    lw r2, 0(r1)        ; restore IP
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; /MOD ( n1 n2 -- rem quot ) : unsigned divide n1 by n2
-entry_slashmod:
-    .word entry_minus
-    .byte 4
-    .byte 47, 77, 79, 68   ; "/MOD"
-do_slashmod:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-    pop r2               ; r2 = n2 (divisor)
-    pop r0               ; r0 = n1 (dividend)
-    ; Divide r0 / r2 → quotient in fp, remainder in r0
-    ; Use repeated subtraction (same algorithm as . word)
-    add r1, -3
-    sw r2, 0(r1)        ; save divisor. RS: [divisor, IP]
-    lc r2, 0             ; quotient = 0
-slashmod_loop:
-    push r2              ; save quotient on DS
-    lw r2, 0(r1)        ; r2 = divisor
-    clu r0, r2           ; C = (dividend < divisor)?
-    brt slashmod_done
-    sub r0, r2           ; dividend -= divisor
-    pop r2               ; r2 = quotient
-    add r2, 1
-    bra slashmod_loop
-slashmod_done:
-    ; r0 = remainder, TOS on DS = quotient
-    pop r2               ; r2 = quotient
-    add r1, 3           ; pop divisor. RS: [IP]
-    push r0              ; push remainder
-    push r2              ; push quotient
-    lw r2, 0(r1)        ; restore IP
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
+; Subset 16: `*`, `-`, `/MOD` moved to Forth in core/lowlevel.fth
+; (and `-` in core/runtime.fth since minimal.fth uses it for offset
+; arithmetic). `+` stays asm — used everywhere and hardware `add` is
+; cheap. The old `*` used `mul r0, r2` (single-cycle on COR24); the
+; Forth version is a repeated-addition loop, asymptotically much
+; slower but still tractable within the fib demo's instruction budget.
 
 ; NAND ( n1 n2 -- ~(n1&n2) )  — subset 15: replaces AND/OR/XOR.
 ; Forth-level AND/OR/XOR/INVERT live in core/runtime.fth, derived via
 ; classical NAND-gate identities (INVERT = a NAND a, AND = NAND then
 ; INVERT, OR = DeMorgan, XOR = 4-NAND form).
 entry_nand:
-    .word entry_slashmod
+    .word entry_plus                ; was entry_slashmod; */-/MOD now in Forth
     .byte 4
     .byte 78, 65, 78, 68    ; "NAND"
 do_nand:

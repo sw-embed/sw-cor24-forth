@@ -19,8 +19,31 @@
 \ ---- Arithmetic shorthand ----
 : 1+      1 + ;
 : 1-      1 - ;
-: NEGATE  0 SWAP - ;
+\ NEGATE moved to runtime.fth (needs INVERT; subset 16 moved `-` to Forth).
 : ABS     DUP 0< IF NEGATE THEN ;
+
+\ ---- Subset 16: multiply and divide-mod as Forth loops ----
+\ `*` by repeated addition: a acc loop counter b down-to-0.
+\   a b -- a*b. O(b) threaded cycles — slow for large b but saves
+\   17 asm lines and makes the ISA self-hosting path clear.
+: *  ( a b -- a*b )
+  0 SWAP
+  BEGIN DUP WHILE
+    1 - >R OVER + R>
+  REPEAT
+  DROP NIP
+;
+
+\ `/MOD` by repeated subtraction. Keeps divisor on RS as a loop
+\ invariant. Behaviour matches the old asm: unsigned, loops
+\ forever on divisor=0.
+: /MOD  ( dividend divisor -- rem quot )
+  >R 0 SWAP
+  BEGIN DUP R@ < INVERT WHILE
+    R@ - SWAP 1 + SWAP
+  REPEAT
+  R> DROP SWAP
+;
 
 \ ---- Division helpers on top of /MOD ----
 : /     /MOD SWAP DROP ;
