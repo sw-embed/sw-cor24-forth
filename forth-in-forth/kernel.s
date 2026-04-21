@@ -2302,33 +2302,40 @@ var_sp_base:
     .word 0             ; snapshot of initial sp taken at _start
 
 ; ============================================================
-; compute_hash: len-seeded mult33 hash over a counted name.
+; compute_hash: 2-Round 24-bit XMX hash over a counted name.
 ;
-; Inputs (via fixed memory cells):
+; Per docs/hashing.txt's recommendation for 24-bit GPR ISAs.
+; Per character:
+;   h = h XOR char
+;   h = h * MAGIC        ; 24-bit truncation is native (mul)
+;   h = h XOR (h SRL 12) ; spread high bits into low
+; bucket = h & 0xFF
+;
+; MAGIC = 0xDEADB5 = 14,592,437
+;
+; Inputs via fixed memory cells:
 ;   hash_arg_ptr — address of first name byte
 ;   hash_arg_len — length of name (0-63)
 ; Output:
 ;   hash_result  — bucket index (0-255)
 ; Control:
-;   hash_ret_addr must be set to the return address before jumping
-;   here. At end, the subroutine `jmp (hash_ret_addr)`.
+;   hash_ret_addr — caller sets; subroutine jumps to this on exit
 ;
-; Algorithm: h = length; for each char: h = h*33 + char; bucket = h & 255.
-; 11 collisions on our 90-word dict at 256 buckets; see
-; scripts/hash-collision-analysis.py.
+; Collision count on our 90-word dict at 256 buckets: 15
+; (vs 11 for len-seeded mult33, 47 for first_char).
+; See scripts/hash-collision-analysis.py and docs/hashing-analysis.md.
 ; ============================================================
 compute_hash:
     la r0, hash_arg_ptr
     lw r0, 0(r0)         ; r0 = ptr
     la r2, hash_arg_len
     lw r2, 0(r2)         ; r2 = length
-    ; Save on RS: [remlen=length, ptr]
     add r1, -3
     sw r0, 0(r1)         ; RS: [ptr]
     add r1, -3
     sw r2, 0(r1)         ; RS: [remlen, ptr]
-    ; h = length (seed); keep in r0
-    mov r0, r2
+    ; h = 0 (XMX starts with no seed)
+    lc r0, 0
 ch_loop:
     lw r2, 0(r1)         ; r2 = remlen
     ceq r2, z
@@ -2336,32 +2343,34 @@ ch_loop:
     ; Save h, read char at ptr
     add r1, -3
     sw r0, 0(r1)         ; RS: [h, remlen, ptr]
-    lw r0, 6(r1)         ; r0 = ptr (at RS offset 6 after push)
+    lw r0, 6(r1)         ; r0 = ptr (at RS offset 6)
     lbu r2, 0(r0)        ; r2 = char
-    ; Restore h, compute h = h * 33 + char
     lw r0, 0(r1)         ; r0 = h
     add r1, 3            ; pop h. RS: [remlen, ptr]
+
+    ; XMX round: h = (h ^ char) * MAGIC; h ^= h >> 12
+    xor r0, r2           ; r0 = h ^ char
+    la r2, 14592437      ; r2 = MAGIC = 0xDEADB5
+    mul r0, r2           ; r0 = (h^char) * MAGIC, 24-bit truncated
     add r1, -3
-    sw r2, 0(r1)         ; save char. RS: [char, remlen, ptr]
-    lc r2, 33
-    mul r0, r2           ; r0 = h * 33
-    lw r2, 0(r1)         ; r2 = char
-    add r0, r2           ; r0 = h*33 + char
-    add r1, 3            ; pop char. RS: [remlen, ptr]
-    ; Advance ptr
+    sw r0, 0(r1)         ; stash h on RS
+    la r2, 12
+    srl r0, r2           ; r0 = h >> 12
+    lw r2, 0(r1)         ; r2 = h (pre-shift)
+    add r1, 3            ; pop
+    xor r0, r2           ; r0 = h ^ (h >> 12)
+
+    ; Advance ptr, decrement remlen
     lw r2, 3(r1)
     add r2, 1
     sw r2, 3(r1)
-    ; Decrement remlen
     lw r2, 0(r1)
     add r2, -1
     sw r2, 0(r1)
     bra ch_loop
 ch_done:
-    ; r0 = final h; mask to 0-255
     lcu r2, 255
     and r0, r2
-    ; Store to hash_result, clean RS, return
     la r2, hash_result
     sw r0, 0(r2)
     add r1, 6            ; pop [remlen, ptr]
