@@ -472,14 +472,18 @@ lt_done:
     jmp (r0)
 
 ; ============================================================
-; Stack Primitives
+; Stack Primitives — subset 14B moved DUP/DROP/SWAP/OVER/R@ to
+; core/runtime.fth as Forth colon defs using SP@/SP!/RP@/@/!/>R/R>.
+; What remains in asm:
+;   do_drop  — body only, no dict entry; called from tick_word_cfa
+;   >R, R>   — full primitives. `>R` must atomically decrement r1
+;              and store; R> mirrors. A Forth version would have
+;              to preserve the outer colon's saved-IP slot, which
+;              needs asm-level r1/r2 control.
 ; ============================================================
 
-; DROP ( x -- )
-entry_drop:
-    .word entry_less
-    .byte 4
-    .byte 68, 82, 79, 80
+; do_drop: kept as an internal helper for tick_word_cfa (['])
+; — no dict entry, so the user-level DROP is the Forth version.
 do_drop:
     pop r0
     ; NEXT
@@ -487,54 +491,9 @@ do_drop:
     add r2, 3
     jmp (r0)
 
-; DUP ( x -- x x )
-entry_dup:
-    .word entry_drop
-    .byte 3
-    .byte 68, 85, 80
-do_dup:
-    pop r0
-    push r0
-    push r0
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; SWAP ( x1 x2 -- x2 x1 )
-entry_swap:
-    .word entry_dup
-    .byte 4
-    .byte 83, 87, 65, 80
-do_swap:
-    pop r0               ; x2
-    pop fp               ; x1
-    push r0              ; x2
-    push fp              ; x1
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; OVER ( x1 x2 -- x1 x2 x1 )
-entry_over:
-    .word entry_swap
-    .byte 4
-    .byte 79, 86, 69, 82
-do_over:
-    pop r0               ; x2
-    pop fp               ; x1
-    push fp              ; x1
-    push r0              ; x2
-    push fp              ; x1 copy
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
 ; >R ( x -- ) ( R: -- x )
 entry_tor:
-    .word entry_over
+    .word entry_less
     .byte 2
     .byte 62, 82
 do_tor:
@@ -560,26 +519,13 @@ do_rfrom:
     add r2, 3
     jmp (r0)
 
-; R@ ( -- x ) ( R: x -- x )
-entry_rfetch:
-    .word entry_rfrom
-    .byte 2
-    .byte 82, 64
-do_rfetch:
-    lw r0, 0(r1)
-    push r0
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
 ; ============================================================
 ; Memory Primitives
 ; ============================================================
 
 ; @ ( addr -- x ) : Fetch cell from address
 entry_fetch:
-    .word entry_rfetch
+    .word entry_rfrom           ; was entry_rfetch; R@ now in Forth
     .byte 1
     .byte 64
 do_fetch:
@@ -2739,49 +2685,6 @@ dict_hash_table:
     .word 0, 0, 0, 0, 0, 0, 0, 0
 dict_hash_table_end:
 
-    .word do_exit
-
-; ============================================================
-; Phase 2 Test Colon Definitions (using far CFA format)
-; ============================================================
-
-; : TEST  42 EMIT 10 EMIT ;   — prints "*\n"
-test_word_cfa:
-    push r0
-    la r0, do_docol_far
-    jmp (r0)
-    .word do_lit
-    .word 42
-    .word do_emit
-    .word do_lit
-    .word 10
-    .word do_emit
-    .word do_exit
-
-; : DOUBLE  DUP + ;
-double_word:
-    push r0
-    la r0, do_docol_far
-    jmp (r0)
-    .word do_dup
-    .word do_plus
-    .word do_exit
-
-; : MAIN  3 DOUBLE 48 + EMIT 10 EMIT ;   — prints "6\n"
-main_word:
-    push r0
-    la r0, do_docol_far
-    jmp (r0)
-    .word do_lit
-    .word 3
-    .word double_word
-    .word do_lit
-    .word 48
-    .word do_plus
-    .word do_emit
-    .word do_lit
-    .word 10
-    .word do_emit
     .word do_exit
 
 ; ============================================================

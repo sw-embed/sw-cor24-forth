@@ -1,7 +1,7 @@
 command = """
-cor24-run --run forth-on-forthish/kernel.s -u "$(cat forth-on-forthish/core/minimal.fth forth-on-forthish/core/lowlevel.fth forth-on-forthish/core/midlevel.fth forth-on-forthish/core/highlevel.fth examples/14-fib.fth)
+cor24-run --run forth-on-forthish/kernel.s -u "$(cat forth-on-forthish/core/runtime.fth forth-on-forthish/core/minimal.fth forth-on-forthish/core/lowlevel.fth forth-on-forthish/core/midlevel.fth forth-on-forthish/core/highlevel.fth examples/14-fib.fth)
 " --speed 0 -n 800000000 2>&1"""
 timeout = 60
 preprocess = "grep -A 100 '^UART output:' || true"
 exit_code = 0
-desc = "fib through forth-on-forthish kernel"
+desc = "fib through forth-on-forthish kernel (loads runtime.fth first)"
