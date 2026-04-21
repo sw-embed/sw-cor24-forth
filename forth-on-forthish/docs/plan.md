@@ -17,47 +17,19 @@ Each subset is a single git commit; each must keep
 - `docs/{prd,architecture,design,plan,status}.md`: this set.
 - `reg-rs/tf24a_fof_fib`: pins fib output through this kernel.
 
+### Subset 13 — `,DOCOL` primitive + Forth `:` / `;` — DONE (a98b4b8)
+
+- `,DOCOL` primitive exposes the 6-byte far-CFA template (asm
+  `do_colon_cfa`) as a named dictionary entry.
+- SMUDGE/HIDDEN handling added to asm `do_colon` / `do_semi` per
+  option **(a)** from the three options originally considered:
+  `do_colon` sets bit 6 of `flags_len`, `do_semi` clears it. ~15 asm
+  lines total.
+- `core/runtime.fth` introduced as the earliest-loading Forth tier
+  with: `: : CREATE ,DOCOL LATEST @ 3 + DUP C@ 64 OR SWAP C! ] ;`
+  and `: ; ['] EXIT , LATEST @ 3 + DUP C@ 191 AND SWAP C! 0 STATE ! ; IMMEDIATE`.
+
 ## Upcoming
-
-### Subset 13 — `,DOCOL` primitive + move `:` and `;` to Forth — PARTIAL
-
-**Done**: added `,DOCOL` primitive. It emits the 6-byte far-CFA
-template at HERE — exactly what asm `do_colon_cfa` does internally,
-now exposed as a named dictionary entry so Forth code can build
-colon headers without asm assistance.
-
-**Blocked**: actually moving `:` and `;` to Forth hits the classic
-"SMUDGE bit" problem. Sketch:
-
-```
-: ; ['] EXIT , 0 STATE ! ; IMMEDIATE   \ defining Forth ;
-```
-
-When the compiler reaches the final `;` token at end of this
-line, `FIND` walks LATEST and returns the **in-progress NEW `;`
-entry** (CREATE published its header at the start of the line).
-Since NEW `;` has an incomplete body, executing it immediately
-(because it's IMMEDIATE) runs partial threaded code and falls off
-into random memory.
-
-Standard Forth kernels avoid this by setting a SMUDGE/HIDDEN bit
-at CREATE time and clearing it at `;`. Our asm `:` / `;` don't do
-this (they don't need to — asm `:` never re-enters itself during
-compile).
-
-**Unblocking options** (for a follow-up subset):
-- **(a) Small asm tweak**: extend `do_colon` to OR 0x40 (HIDDEN)
-  into `flags_len` of the new entry; extend `do_semi` to AND
-  ~0x40 to clear. ~10 asm lines total. Then Forth `:`/`;` can
-  bootstrap normally.
-- **(b) HIDE-LATEST / UNHIDE-LATEST primitives**: expose the bit
-  manipulation as named words. Forth `:` and `;` call them.
-- **(c) Modify CREATE** to always set HIDDEN, plus a way to clear
-  at `;`. Semantic change.
-
-Resolution deferred — see docs/design.md.
-
-Saves ~150 asm lines when unblocked.
 
 ### Subset 14 — stack ops via `SP@`/`SP!`/`RP@`/`RP!`
 Add `SP!`, `RP@`, `RP!` primitives (`SP@` already exists). Move

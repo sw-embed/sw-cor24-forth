@@ -1,5 +1,54 @@
 # Changelog
 
+## Feature: DO/LOOP family + defining words + Forth `:`/`;` (2026-04-20)
+
+### Added — both kernels (`forth-in-forth` and `forth-on-forthish`)
+
+- `,DOCOL` primitive: emits the 6-byte far-CFA template at `HERE`,
+  exposing the colon-def header machinery to Forth-level code.
+- `AGAIN`, `WHILE`, `REPEAT` in `core/minimal.fth` (built on
+  `0BRANCH`/`BRANCH`, no new primitives).
+- `CONSTANT`, `VARIABLE` in `core/lowlevel.fth` (layered on
+  `CREATE` + `,DOCOL` + `LIT`, no `DOES>` yet).
+- Counted loops: `(DO)`/`(LOOP)`/`(?DO)`/`I`/`UNLOOP` kernel
+  primitives plus IMMEDIATE `DO`/`LOOP`/`?DO` compilers in
+  `core/lowlevel.fth`. RS layout inside a loop body is
+  `[index][limit][caller-IP]`; `UNLOOP` must precede `EXIT`.
+- `LIT` unhidden (flag byte 67→3) so Forth code can compile
+  `['] LIT` references.
+- Demos: `examples/15-again.fth`, `16-while.fth`, `17-constant.fth`,
+  `18-variable.fth`, `19-do-loop.fth`.
+
+### Added — `forth-on-forthish` (phase 3 subset 13)
+
+- Forth-defined `:` and `;` in new `core/runtime.fth` tier. Asm `:`
+  and `;` remain but are shadowed at Forth level. SMUDGE/HIDDEN bit
+  handling added to asm `do_colon` / `do_semi` so the in-progress
+  entry is invisible to `FIND` until `;` runs.
+
+### Fixed
+
+- FIND performance — hash-indexed FIND with 1-entry lookaside cache
+  (issue #1). 8-bucket XMX hash (see `docs/hashing-analysis.md`)
+  reduced worst-case chain length for the bootstrap vocabulary from
+  47 entries to 11–15 depending on variant.
+- `scripts/see-demo.sh` (both kernels): was calling `SEE SQUARE` /
+  `SEE CUBE`, which prints only the body with no `: NAME` prefix.
+  Swapped to `DUMP-ALL` to match the web demo (`DUMP_ALL_SRC` in
+  `../web-sw-cor24-forth/src/demos.rs`). Also filters bare ` ok`
+  prompt lines from the output.
+- `scripts/see-demo.sh` / `scripts/dump.sh`: core-load ` ok` noise
+  now truncated at a visible `========` marker.
+
+### Known issues
+
+- `SEE-CFA` linear decompiler treats any cell equal to `do_exit`'s
+  CFA as end-of-body, so words that compile `['] EXIT` (e.g. Forth
+  `CONSTANT`, `;`) show truncated bodies in `DUMP-ALL` output
+  (issue #4).
+- Issue #3 tracks remaining follow-up words: `+LOOP`, `J`, `LEAVE`,
+  `DOES>`, `RECURSE`, `PICK`/`ROLL`/`?DUP`/`MIN`/`MAX`/`<=`/`>=`/`<>`.
+
 ## Fix: Dictionary Chain + Test Coverage (2026-04-10)
 
 ### Fixed
