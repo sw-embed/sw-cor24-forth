@@ -1543,12 +1543,57 @@ do_colon:
     add r2, 3
     jmp (r0)
 
-; Helper thread for COLON: CREATE, then colon_write_cfa
+; Helper thread for COLON: CREATE header, write CFA template, set
+; HIDDEN on new entry (SMUDGE bit — so `;` at end of the definition
+; doesn't trip on the still-being-compiled entry), enter compile mode.
 colon_thread:
     .word do_create
     .word do_colon_cfa
-    .word do_rbrac       ; enter compile mode
-    .word do_exit        ; return to original IP (saved on RS by do_colon)
+    .word do_hide_latest   ; set HIDDEN bit so FIND skips the in-progress entry
+    .word do_rbrac         ; enter compile mode
+    .word do_exit          ; return to original IP (saved on RS by do_colon)
+
+; Set HIDDEN (bit 6) on LATEST's flags_len byte. Called from colon_thread.
+; Also usable as a standalone primitive (entry_hide_latest below).
+do_hide_latest:
+    add r1, -3
+    sw r2, 0(r1)         ; save IP
+    la r0, var_latest_val
+    lw r0, 0(r0)         ; r0 = latest entry addr
+    add r0, 3            ; r0 = addr of flags_len
+    lbu r2, 0(r0)        ; r2 = flags_len
+    push r0              ; save addr
+    lcu r0, 64
+    or r2, r0            ; set bit 6
+    pop r0
+    sb r2, 0(r0)
+    lw r2, 0(r1)         ; restore IP
+    add r1, 3
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; Clear HIDDEN (bit 6) on LATEST's flags_len byte. Called by do_semi
+; below and exposed as an UNHIDE-LATEST primitive for Forth `;`.
+do_unhide_latest:
+    add r1, -3
+    sw r2, 0(r1)
+    la r0, var_latest_val
+    lw r0, 0(r0)
+    add r0, 3
+    lbu r2, 0(r0)
+    push r0
+    lcu r0, 191          ; 0xBF = ~0x40 in 8-bit
+    and r2, r0
+    pop r0
+    sb r2, 0(r0)
+    lw r2, 0(r1)
+    add r1, 3
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
 
 ; Helper: write 6-byte CFA at HERE
 ; Writes: push r0 (0x7D), la r0 opcode (0x29), do_docol_far addr (3B), jmp r0 (0x26)
@@ -1606,6 +1651,16 @@ do_semi:
     add r2, 3
     la r0, var_here_val
     sw r2, 0(r0)        ; update HERE
+    ; Clear HIDDEN on LATEST (complementary to do_colon's HIDE)
+    la r0, var_latest_val
+    lw r0, 0(r0)
+    add r0, 3
+    lbu r2, 0(r0)
+    push r0
+    lcu r0, 191          ; ~0x40 in 8-bit
+    and r2, r0
+    pop r0
+    sb r2, 0(r0)
     ; STATE = 0 (interpreting)
     la r0, var_state_val
     lc r2, 0

@@ -6,7 +6,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 FOF="$HERE/.."
 CORE_FILES=()
-for tier in minimal lowlevel midlevel highlevel; do
+for tier in runtime minimal lowlevel midlevel highlevel; do
   f="$FOF/core/$tier.fth"
   [ -f "$f" ] && CORE_FILES+=("$f")
 done
