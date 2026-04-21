@@ -241,7 +241,7 @@ do_exit:
 ; ------------------------------------------------------------
 entry_lit:
     .word entry_exit
-    .byte 67
+    .byte 3          ; unhidden (was 67 = HIDDEN|3) so Forth can ['] LIT
     .byte 76, 73, 84
 do_lit:
     lw r0, 0(r2)        ; r0 = literal at IP

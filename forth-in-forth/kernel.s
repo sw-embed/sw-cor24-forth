@@ -241,7 +241,7 @@ do_exit:
 ; ------------------------------------------------------------
 entry_lit:
     .word entry_exit
-    .byte 67
+    .byte 3          ; unhidden (was 67 = HIDDEN|3) so Forth can ['] LIT
     .byte 76, 73, 84
 do_lit:
     lw r0, 0(r2)        ; r0 = literal at IP
@@ -1618,10 +1618,24 @@ do_semi:
     jmp (r0)
 
 ; ------------------------------------------------------------
+; ,DOCOL ( -- ) : Emit the 6-byte far-CFA template at HERE,
+; advance HERE by 6. Exposes the asm `:` internal helper
+; (do_colon_cfa) for Forth-defined CONSTANT, VARIABLE, and a
+; future Forth-defined `:` (phase 3, forth-on-forthish).
+; ------------------------------------------------------------
+entry_comma_docol:
+    .word entry_semi
+    .byte 6
+    .byte 44, 68, 79, 67, 79, 76    ; ",DOCOL"
+do_comma_docol:
+    la r0, do_colon_cfa
+    jmp (r0)
+
+; ------------------------------------------------------------
 ; IMMEDIATE ( -- ) : Toggle IMMEDIATE flag on most recent word
 ; ------------------------------------------------------------
 entry_immediate:
-    .word entry_semi
+    .word entry_comma_docol
     .byte 9
     .byte 73, 77, 77, 69, 68, 73, 65, 84, 69
 do_immediate:

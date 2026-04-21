@@ -25,3 +25,12 @@
 \ ---- Division helpers on top of /MOD ----
 : /     /MOD SWAP DROP ;
 : MOD   /MOD DROP ;
+
+\ ---- CONSTANT / VARIABLE: CREATE a headed entry, then stamp a
+\ colon-def CFA at HERE with ,DOCOL and compile a LIT-based body.
+\ n CONSTANT NAME   → NAME pushes n
+\ VARIABLE NAME     → NAME pushes the address of a cell initialised to 0
+\ VARIABLE body layout after ,DOCOL (6 bytes): LIT , <addr> , EXIT , <cell>
+\ so the address pushed is HERE+9 at definition time (LIT=3, addr=3, EXIT=3).
+: CONSTANT  CREATE ,DOCOL ['] LIT , , ['] EXIT , ;
+: VARIABLE  CREATE ,DOCOL HERE @ 9 + ['] LIT , , ['] EXIT , 0 , ;
