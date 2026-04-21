@@ -2,8 +2,8 @@
 
 ( This is a paren comment — can appear inline )
 
-: square ( n -- n*n ) dup * ;
-: demo ( -- ) 7 square . ;
+: SQUARE ( n -- n*n ) DUP * ;
+: DEMO ( -- ) 7 SQUARE . ;
 
 \ Try it:
-demo
+DEMO
