@@ -388,55 +388,22 @@ slashmod_done:
     add r2, 3
     jmp (r0)
 
-; AND ( n1 n2 -- n1&n2 )
-entry_and:
+; NAND ( n1 n2 -- ~(n1&n2) )  — subset 15: replaces AND/OR/XOR.
+; Forth-level AND/OR/XOR/INVERT live in core/runtime.fth, derived via
+; classical NAND-gate identities (INVERT = a NAND a, AND = NAND then
+; INVERT, OR = DeMorgan, XOR = 4-NAND form).
+entry_nand:
     .word entry_slashmod
-    .byte 3
-    .byte 65, 78, 68
-do_and:
+    .byte 4
+    .byte 78, 65, 78, 68    ; "NAND"
+do_nand:
     add r1, -3
     sw r2, 0(r1)
-    pop r2
-    pop r0
-    and r0, r2
-    push r0
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; OR ( n1 n2 -- n1|n2 )
-entry_or:
-    .word entry_and
-    .byte 2
-    .byte 79, 82
-do_or:
-    add r1, -3
-    sw r2, 0(r1)
-    pop r2
-    pop r0
-    or r0, r2
-    push r0
-    lw r2, 0(r1)
-    add r1, 3
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; XOR ( n1 n2 -- n1^n2 )
-entry_xor:
-    .word entry_or
-    .byte 3
-    .byte 88, 79, 82
-do_xor:
-    add r1, -3
-    sw r2, 0(r1)
-    pop r2
-    pop r0
-    xor r0, r2
+    pop r2               ; r2 = n2
+    pop r0               ; r0 = n1
+    and r0, r2           ; r0 = n1 & n2
+    la r2, -1
+    xor r0, r2           ; r0 = ~(n1 & n2)
     push r0
     lw r2, 0(r1)
     add r1, 3
@@ -450,7 +417,7 @@ do_xor:
 
 ; < ( n1 n2 -- flag ) : -1 if n1 < n2 signed, 0 otherwise
 entry_less:
-    .word entry_xor
+    .word entry_nand                ; was entry_xor; AND/OR/XOR now in Forth
     .byte 1
     .byte 60
 do_less:
