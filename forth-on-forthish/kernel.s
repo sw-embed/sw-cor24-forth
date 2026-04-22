@@ -767,10 +767,10 @@ do_rbrac:
 ;   r1+6  = c-addr (for not-found return)
 ;   r1+9  = saved IP
 ; ============================================================
-entry_find:
-    .word entry_rbrac
-    .byte 4
-    .byte 70, 73, 78, 68
+; Subset 18: user-visible FIND is now a Forth colon def in
+; core/highlevel.fth (simple linked-list walk; no hash or lookaside
+; fast path). The asm do_find body remains because INTERPRET and
+; tick_word_cfa reference `.word do_find` by address.
 do_find:
     add r1, -3
     sw r2, 0(r1)        ; save IP          RS: [IP]
@@ -1167,7 +1167,9 @@ word_no_set_eol:
 ; Updates LATEST. Does NOT write CFA — caller does that.
 ; ------------------------------------------------------------
 entry_create:
-    .word entry_find         ; was entry_word; WORD is now in core/lowlevel.fth
+    .word entry_rbrac        ; was entry_find; FIND is now in core/highlevel.fth
+                             ; (asm do_find body stays — INTERPRET's thread + [']
+                             ;  reference `.word do_find` directly.)
     .byte 6
     .byte 67, 82, 69, 65, 84, 69
 do_create:

@@ -19,6 +19,57 @@
   DROP DROP
 ;
 
+\ ---- Subset 18: user-level FIND as a Forth linked-list walk ----
+\ STR= ( a1 a2 n -- flag )  byte-compare two n-byte strings.
+: STR=  ( a1 a2 n -- flag )
+  BEGIN DUP WHILE
+    1 -
+    >R
+    OVER C@ OVER C@ = INVERT IF
+      R> DROP 2DROP 0 EXIT
+    THEN
+    SWAP 1 + SWAP 1 +
+    R>
+  REPEAT
+  2DROP DROP -1
+;
+
+\ FIND ( c-addr -- cfa 1-or-minus-1 | c-addr 0 )
+\ Walk LATEST chain. Skip HIDDEN; compare flags_len&63 to search len,
+\ then byte-compare name. Returns (cfa, 1) for IMMEDIATE, (cfa, -1) for
+\ normal, or (c-addr, 0) if not found. No hash/lookaside — linear walk.
+: FIND  ( c-addr -- cfa 1-or-minus-1 | c-addr 0 )
+  DUP C@ OVER 1 +
+  LATEST @
+  BEGIN DUP WHILE
+    DUP 3 + C@ 64 AND IF
+      @
+    ELSE
+      DUP 3 + C@ 63 AND
+      3 PICK = IF
+        DUP 3 + C@ 63 AND
+        OVER 4 +
+        3 PICK
+        ROT
+        STR= IF
+          DUP 3 + C@
+          DUP 63 AND
+          2 PICK + 4 +
+          SWAP 128 AND
+          IF 1 ELSE -1 THEN
+          >R >R
+          DROP DROP DROP DROP
+          R> R>
+          EXIT
+        THEN
+      THEN
+      @
+    THEN
+  REPEAT
+  DROP DROP DROP
+  0
+;
+
 \ ---- ' (tick): runtime CFA lookup ----
 : '  WORD FIND DROP ;
 

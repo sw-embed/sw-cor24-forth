@@ -6,6 +6,10 @@
 : TUCK  SWAP OVER ;
 : ROT   >R SWAP R> SWAP ;
 : -ROT  ROT ROT ;
+\ PICK ( xn..x0 n -- xn..x0 xn ). 0 PICK = DUP; 1 PICK = OVER.
+\ Computes (n+1)*3 as n+1 + n+1 + n+1 to avoid calling the Forth-level
+\ `*` (which is itself a loop).
+: PICK  1 + DUP DUP + + SP@ + @ ;
 
 \ ---- Double-cell stack helpers ----
 : 2DUP  OVER OVER ;
