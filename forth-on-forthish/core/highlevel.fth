@@ -73,6 +73,52 @@
 \ ---- ' (tick): runtime CFA lookup ----
 : '  WORD FIND DROP ;
 
+\ ---- Subset 19: user-level NUMBER and DIGIT-VALUE ----
+\ DIGIT-VALUE ( char -- n -1 | char 0 )  — convert ASCII digit char to
+\ its numeric value in the current BASE's supported range (0–9, A–F,
+\ a–f). Returns (n, -1) on success, leaves (char, 0) on failure so the
+\ caller can emit a diagnostic.
+: DIGIT-VALUE  ( char -- n -1 | char 0 )
+  DUP 48 < IF 0 EXIT THEN
+  DUP 58 < IF 48 - -1 EXIT THEN
+  DUP 65 < IF 0 EXIT THEN
+  DUP 71 < IF 55 - -1 EXIT THEN
+  DUP 97 < IF 0 EXIT THEN
+  DUP 103 < IF 87 - -1 EXIT THEN
+  0
+;
+
+\ NUMBER ( c-addr -- n 0 | 0 -1 )  — parse counted string at c-addr
+\ as a signed integer in BASE. Handles leading '-'. Returns (n, 0) on
+\ success, (0, -1) on failure (empty, bare '-', or any non-digit char).
+\ Layout during the digit loop: sign and running accumulator live on
+\ RS (RS top = acc, below = sign); DS carries (rem ptr).
+: NUMBER  ( c-addr -- n 0 | 0 -1 )
+  DUP C@
+  DUP 0= IF 2DROP 0 -1 EXIT THEN
+  SWAP 1 +
+  1 >R                                   \ RS: sign=1
+  OVER C@ 45 = IF
+    R> DROP -1 >R                        \ sign=-1
+    1 + SWAP 1 - SWAP
+    OVER 0= IF 2DROP R> DROP 0 -1 EXIT THEN
+  THEN
+  0 >R                                   \ RS: sign, acc=0
+  BEGIN
+    OVER
+  WHILE
+    DUP C@ DIGIT-VALUE IF
+      R> BASE @ * + >R                   \ acc = acc*BASE + digit
+      1 + SWAP 1 - SWAP                  \ ptr++, rem--
+    ELSE
+      DROP 2DROP R> DROP R> DROP 0 -1 EXIT
+    THEN
+  REPEAT
+  2DROP
+  R> R> *
+  0
+;
+
 \ ---- PRINT-NAME: emit N chars from a name buffer + trailing space.
 : PRINT-NAME ( name-addr namelen -- )
   BEGIN

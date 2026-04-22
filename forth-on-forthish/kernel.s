@@ -1613,10 +1613,10 @@ do_sw_fetch:
 ; RS frame: [sign, acc, ptr, rem, saved_IP]
 ; (`.` is defined in Forth, see core/midlevel.fth.)
 ; ------------------------------------------------------------
-entry_number:
-    .word entry_sw_fetch
-    .byte 6
-    .byte 78, 85, 77, 66, 69, 82
+; Subset 19: user-visible NUMBER is now a Forth colon def in
+; core/highlevel.fth (digit-conversion loop in BASE). The asm
+; do_number body stays here because INTERPRET's thread
+; (`.word do_number`) references it by address.
 do_number:
     add r1, -3
     sw r2, 0(r1)        ; RS: [IP]
@@ -1822,7 +1822,7 @@ num_pos:
 ; No nested continuations.
 ; ------------------------------------------------------------
 entry_interpret:
-    .word entry_number
+    .word entry_sw_fetch     ; was entry_number; NUMBER is now in core/highlevel.fth
     .byte 9
     .byte 73, 78, 84, 69, 82, 80, 82, 69, 84
 
