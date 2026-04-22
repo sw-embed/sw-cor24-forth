@@ -122,3 +122,15 @@ cor24-run --run forth.s -u 'DEPTH .\nNEWWORD\nDEPTH .\n' --speed 0 -n 10000000
 - Status register: address -65279 (0xFF0101)
 - TX busy: bit 7 of status
 - RX ready: bit 0 of status
+
+### Agentrail tracking
+
+`.agentrail/` (active saga) and `.agentrail-archive/` (archived sagas)
+are **tracked in git, not ignored**. Commit them alongside the code
+they describe:
+- On `agentrail complete`: include the updated `.agentrail/` state in
+  the step's commit so saga history matches git history.
+- On `agentrail archive`: commit the new `.agentrail-archive/<saga>/`
+  directory and the cleared `.agentrail/` together.
+- Never add `.agentrail` patterns to `.gitignore`. If `agentrail audit`
+  reports gaps, fix them with a commit, not by rewriting history.
