@@ -1021,13 +1021,12 @@ find_push_flag:
 ; ============================================================
 
 ; ------------------------------------------------------------
-; WORD ( -- c-addr ) : Read space-delimited word from UART
-; Stores counted string at word_buffer, returns its address
+; do_word ( -- c-addr ) : Read space-delimited word from UART.
+; Subset 17: dict entry removed — user-visible WORD is now a Forth
+; colon def in core/lowlevel.fth that uses KEY / WORD-BUFFER /
+; EOL-FLAG. The asm body stays here because INTERPRET and
+; tick_word_cfa (the `[']` impl) reference .word do_word directly.
 ; ------------------------------------------------------------
-entry_word:
-    .word entry_find
-    .byte 4
-    .byte 87, 79, 82, 68
 do_word:
     add r1, -3
     sw r2, 0(r1)        ; save IP. RS: [IP]
@@ -1168,7 +1167,7 @@ word_no_set_eol:
 ; Updates LATEST. Does NOT write CFA — caller does that.
 ; ------------------------------------------------------------
 entry_create:
-    .word entry_word
+    .word entry_find         ; was entry_word; WORD is now in core/lowlevel.fth
     .byte 6
     .byte 67, 82, 69, 65, 84, 69
 do_create:
@@ -2243,22 +2242,34 @@ do_rp_store:
 ; (defined below).
 
 ; ------------------------------------------------------------
-; EOL! ( -- ) : Force next WORD call to return an empty token.
-; Used by Forth-defined `\` to signal end-of-line to QUIT after
-; the newline has been consumed via KEY.
+; WORD-BUFFER ( -- addr )  — push address of 32-byte counted-string
+; scratch used by WORD. First byte is length; next up to 31 bytes
+; are name chars. Exposed so the Forth-level WORD (core/lowlevel.fth)
+; can write to it.
+; EOL-FLAG    ( -- addr )  — push address of the 1-byte flag used to
+; signal "previous input ended at newline". minimal.fth's `\` comment
+; parser writes 1; Forth WORD reads-and-clears. Replaces the old
+; EOL! primitive (which was just `1 EOL-FLAG C!`).
 ; ------------------------------------------------------------
-entry_eol_store:
-    .word entry_rp_store    ; was entry_sp_fetch before SP!/RP@/RP! added
-    .byte 4
-    .byte 69, 79, 76, 33     ; "EOL!"
-do_eol_store:
-    add r1, -3
-    sw r2, 0(r1)         ; save IP (r2 clobbered below)
+entry_word_buffer:
+    .word entry_rp_store
+    .byte 11
+    .byte 87, 79, 82, 68, 45, 66, 85, 70, 70, 69, 82   ; "WORD-BUFFER"
+do_word_buffer:
+    la r0, word_buffer
+    push r0
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+entry_eol_flag:
+    .word entry_word_buffer
+    .byte 8
+    .byte 69, 79, 76, 45, 70, 76, 65, 71    ; "EOL-FLAG"
+do_eol_flag:
     la r0, word_eol_flag
-    lc r2, 1
-    sb r2, 0(r0)
-    lw r2, 0(r1)         ; restore IP
-    add r1, 3
+    push r0
     ; NEXT
     lw r0, 0(r2)
     add r2, 3
@@ -2270,7 +2281,7 @@ do_eol_store:
 ; Used by core.fth's IF/THEN/ELSE/UNTIL to embed BRANCH/0BRANCH CFAs.
 ; ------------------------------------------------------------
 entry_tick:
-    .word entry_eol_store
+    .word entry_eol_flag     ; was entry_eol_store; EOL! removed
     .byte 0x83           ; length=3 + IMMEDIATE
     .byte 91, 39, 93     ; "[']"
 tick_word_cfa:

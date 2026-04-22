@@ -49,6 +49,45 @@
 : /     /MOD SWAP DROP ;
 : MOD   /MOD DROP ;
 
+\ ---- Subset 17: WORD ( -- c-addr ) ----
+\ Build a counted string at WORD-BUFFER. Skip leading whitespace;
+\ treat LF (10) and CR (13) as end-of-line → return empty and
+\ preserve EOL-FLAG semantics from minimal.fth's `\` comment.
+\ Read until whitespace; if terminator was LF/CR, set EOL-FLAG so
+\ the NEXT WORD call also returns empty.
+\
+\ Internal asm threads in INTERPRET / `[']` still call the asm
+\ do_word directly (via `.word do_word`); this Forth WORD shadows
+\ the old dict entry for user-level lookups only.
+: WORD  ( -- c-addr )
+  EOL-FLAG C@ IF
+    0 EOL-FLAG C!
+    WORD-BUFFER 0 OVER C! EXIT
+  THEN
+  BEGIN
+    KEY
+    DUP 10 = OVER 13 = OR IF
+      DROP WORD-BUFFER 0 OVER C! EXIT
+    THEN
+    DUP 33 <
+  WHILE DROP REPEAT
+  WORD-BUFFER 1 + >R
+  R@ C!
+  R> 1 + >R
+  BEGIN
+    KEY
+    DUP 33 < INVERT
+  WHILE
+    R@ C!
+    R> 1 + >R
+  REPEAT
+  DUP 10 = OVER 13 = OR IF 1 EOL-FLAG C! THEN
+  DROP
+  R> WORD-BUFFER 1 + -
+  WORD-BUFFER C!
+  WORD-BUFFER
+;
+
 \ ---- CONSTANT / VARIABLE: CREATE a headed entry, then stamp a
 \ colon-def CFA at HERE with ,DOCOL and compile a LIT-based body.
 \ n CONSTANT NAME   → NAME pushes n
