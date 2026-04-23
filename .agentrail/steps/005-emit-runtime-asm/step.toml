@@ -1,6 +1,6 @@
 number = 5
 slug = "emit-runtime-asm"
-status = "pending"
+status = "in-progress"
 description = """
 Extend COMPILE-RUNTIME in forth-from-forth/compiler/xcomp.fth so
 it emits the..."""
