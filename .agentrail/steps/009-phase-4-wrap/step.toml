@@ -1,0 +1,11 @@
+number = 9
+slug = "phase-4-wrap"
+status = "pending"
+description = """
+Wrap up phase 4. Write `forth-from-forth/docs/status.md` final
+section, updat..."""
+role = "production"
+context_files = []
+created_at = "2026-04-22T19:34:31"
+task_type = "documentation"
+commits = []

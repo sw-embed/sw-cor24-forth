@@ -1,0 +1,11 @@
+number = 4
+slug = "boot-runtime-image"
+status = "pending"
+description = """
+Wire the compiled image into `forth-from-forth/kernel.s` so the
+kernel boots ..."""
+role = "production"
+context_files = []
+created_at = "2026-04-22T19:33:16"
+task_type = "feature"
+commits = []

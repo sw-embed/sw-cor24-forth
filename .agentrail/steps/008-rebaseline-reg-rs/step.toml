@@ -1,0 +1,11 @@
+number = 8
+slug = "rebaseline-reg-rs"
+status = "pending"
+description = """
+Re-baseline all `tf24a_*` reg-rs tests that touch
+forth-from-forth. Specifica..."""
+role = "production"
+context_files = []
+created_at = "2026-04-22T19:34:30"
+task_type = "validation"
+commits = []

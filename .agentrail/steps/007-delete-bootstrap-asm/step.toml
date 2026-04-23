@@ -1,0 +1,11 @@
+number = 7
+slug = "delete-bootstrap-asm"
+status = "pending"
+description = """
+Delete the dead asm bootstrap interpreter code from
+`forth-from-forth/kernel...."""
+role = "production"
+context_files = []
+created_at = "2026-04-22T19:34:30"
+task_type = "refactor"
+commits = []

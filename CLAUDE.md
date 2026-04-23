@@ -123,14 +123,118 @@ cor24-run --run forth.s -u 'DEPTH .\nNEWWORD\nDEPTH .\n' --speed 0 -n 10000000
 - TX busy: bit 7 of status
 - RX ready: bit 0 of status
 
-### Agentrail tracking
+---
 
-`.agentrail/` (active saga) and `.agentrail-archive/` (archived sagas)
-are **tracked in git, not ignored**. Commit them alongside the code
-they describe:
-- On `agentrail complete`: include the updated `.agentrail/` state in
-  the step's commit so saga history matches git history.
-- On `agentrail archive`: commit the new `.agentrail-archive/<saga>/`
-  directory and the cleared `.agentrail/` together.
-- Never add `.agentrail` patterns to `.gitignore`. If `agentrail audit`
-  reports gaps, fix them with a commit, not by rewriting history.
+## Agentrail protocol (follow exactly)
+
+This project uses **agentrail** to record work as a sequence of
+**steps** in a **saga**. Each session performs exactly one step:
+read it with `agentrail next`, start with `agentrail begin`, do the
+work, commit with git, then close with `agentrail complete`. Then
+stop — the next step is for the next session. `.agentrail/` is the
+durable record; treat it like source code.
+
+### Session protocol
+
+**1. START** — read your instructions
+```bash
+agentrail next
+```
+Prints the current step's prompt, context files, skills, and past
+trajectories. This is your instruction for the session. If `next`
+reports no current step, the saga is paused/complete — stop and ask
+the user.
+
+**2. BEGIN** — transition the step
+```bash
+agentrail begin
+```
+Marks the step `in-progress`. Required before work.
+
+**3. WORK** — do exactly what the step prompt says
+- The step prompt **is** your instruction. Execute it; don't ask
+  "shall I start?".
+- Do not expand scope. Note other problems as future steps.
+- Stay within the files the step prompt references. If you need to
+  touch something outside that scope, pause and ask.
+
+**4. COMMIT** — git-commit your work
+```bash
+git add <files>
+git commit -m "<clear message>"
+```
+**Must happen before `agentrail complete`.** `complete` captures
+the current `HEAD` commit hash into the step's `commits` field; if
+you complete before committing, the linkage is wrong. Include any
+`.agentrail/` files you touched in the same commit.
+
+**5. COMPLETE** — close the step
+```bash
+agentrail complete \
+  --summary "what you accomplished in one or two sentences" \
+  --reward 1 \
+  --actions "tools and approach used"
+```
+- `--reward 1` on success; `--reward -1 --failure-mode "<cause>"` on
+  failure. Reward feeds trajectory recording.
+- Add `--done` if this was the last step of the saga.
+- Use `--next-slug` and `--next-prompt` to define the next step if
+  known; otherwise the user plans it.
+
+**6. STOP** — do not continue after `agentrail complete`. Anything
+after complete is invisible to the next session. Next work belongs
+in the next step.
+
+### Rules for `.agentrail/` (CRITICAL)
+
+- **Always tracked in git.** Never add `.agentrail` patterns to
+  `.gitignore`. Commit step artifacts in the same commit as the code.
+- **Never edit or delete files under `.agentrail/` or
+  `.agentrail-archive/` by hand.** No `rm`, `mv`, Write, or Edit on
+  anything under those directories. Always use agentrail subcommands
+  (`init`, `add`, `begin`, `complete`, `abort`, `archive`, `plan`,
+  `audit`). Direct deletion of untracked step files is unrecoverable.
+- **Commit order:** work → `git add` → `git commit` → `agentrail
+  complete`. Completing before committing leaves `commits` empty.
+
+### Recovering from gaps
+
+If git history and saga history drift apart:
+```bash
+agentrail audit                    # human-readable report
+agentrail audit --emit-commands    # shell script of `agentrail add` lines
+```
+Review and edit slugs/prompts before running the emitted commands.
+
+### Safety net
+
+Before a risky operation (rebase, big agent run, cleanup):
+```bash
+agentrail snapshot        # save .agentrail/ to refs/agentrail/snapshots/<ts>
+agentrail snapshot --list
+```
+Restore with `git restore --source=<ref> -- .agentrail .agentrail-archive`.
+
+### Quick reference
+
+| Command | When |
+|---|---|
+| `agentrail next` | Every session start |
+| `agentrail begin` | After reading `next`, before working |
+| `agentrail complete --summary "..." --reward 1` | After committing |
+| `agentrail status` / `history` | Read-only inspection |
+| `agentrail plan --update ...` | Revise saga plan |
+| `agentrail add --slug ... --prompt ...` | Add a step (maintenance) |
+| `agentrail abort --reason "..."` | Mark step blocked |
+| `agentrail archive --reason "..."` | Close saga, start fresh |
+| `agentrail audit` | Diagnose saga-vs-git gaps |
+
+### Don't
+
+- Don't run `complete` before committing.
+- Don't touch files under `.agentrail/` with anything other than
+  agentrail subcommands.
+- Don't keep working after `complete`.
+- Don't `.gitignore` `.agentrail/`.
+- Don't skip `agentrail next` — it includes trajectories and skill
+  docs that change as the system learns.

@@ -1,0 +1,11 @@
+number = 2
+slug = "scaffold"
+status = "pending"
+description = """
+Scaffold the `forth-from-forth/` directory as a sibling to
+`forth-on-forthish..."""
+role = "production"
+context_files = []
+created_at = "2026-04-22T19:32:48"
+task_type = "feature"
+commits = []

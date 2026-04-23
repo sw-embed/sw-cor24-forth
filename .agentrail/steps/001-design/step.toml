@@ -1,0 +1,11 @@
+number = 1
+slug = "design"
+status = "pending"
+description = """
+Research and design the phase-4 cross-compiler. Produce
+`forth-from-forth/doc..."""
+role = "production"
+context_files = []
+created_at = "2026-04-22T19:32:48"
+task_type = "research"
+commits = []

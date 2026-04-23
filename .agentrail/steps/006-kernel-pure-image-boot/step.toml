@@ -1,0 +1,11 @@
+number = 6
+slug = "kernel-pure-image-boot"
+status = "pending"
+description = """
+Switch `forth-from-forth/kernel.s` to boot ENTIRELY from the
+pre-compiled ima..."""
+role = "production"
+context_files = []
+created_at = "2026-04-22T19:33:55"
+task_type = "feature"
+commits = []
