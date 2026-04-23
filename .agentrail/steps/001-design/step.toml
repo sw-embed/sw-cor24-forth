@@ -1,6 +1,6 @@
 number = 1
 slug = "design"
-status = "pending"
+status = "in-progress"
 description = """
 Research and design the phase-4 cross-compiler. Produce
 `forth-from-forth/doc..."""
