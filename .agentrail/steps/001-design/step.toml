@@ -1,11 +1,12 @@
 number = 1
 slug = "design"
-status = "in-progress"
+status = "completed"
 description = """
 Research and design the phase-4 cross-compiler. Produce
 `forth-from-forth/doc..."""
 role = "production"
 context_files = []
 created_at = "2026-04-22T19:32:48"
+completed_at = "2026-04-23T00:51:52"
 task_type = "research"
-commits = []
+commits = ["e1e4044460d33ffc553f61e5d37d90d46ee92514"]

@@ -1,0 +1,7 @@
+command = """
+cor24-run --run forth-from-forth/kernel.s -u "$(cat forth-from-forth/core/runtime.fth forth-from-forth/core/minimal.fth forth-from-forth/core/lowlevel.fth forth-from-forth/core/midlevel.fth forth-from-forth/core/highlevel.fth examples/14-fib.fth)
+" --speed 0 -n 800000000 2>&1"""
+timeout = 60
+preprocess = "grep -A 250 '^UART output:' || true"
+exit_code = 0
+desc = "fib through forth-from-forth kernel (step-002 baseline; identical to phase 3)"

@@ -1,6 +1,6 @@
 number = 2
 slug = "scaffold"
-status = "pending"
+status = "in-progress"
 description = """
 Scaffold the `forth-from-forth/` directory as a sibling to
 `forth-on-forthish..."""
