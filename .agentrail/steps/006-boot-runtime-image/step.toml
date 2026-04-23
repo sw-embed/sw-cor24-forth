@@ -1,6 +1,6 @@
-number = 5
+number = 6
 slug = "boot-runtime-image"
-status = "pending"
+status = "blocked"
 description = """
 Wire the compiled image into `forth-from-forth/kernel.s` so the
 kernel boots ..."""

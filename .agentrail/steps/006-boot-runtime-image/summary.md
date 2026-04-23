@@ -1,0 +1,1 @@
+BLOCKED: Python-blob/.incbin-era prompt from saga init; the revised forth-from-forth approach (see e1e4044 design.md and d8b50eb step 004a) emits COR24 asm TEXT not a binary blob. Superseded by newly-inserted 005-emit-runtime-asm.
