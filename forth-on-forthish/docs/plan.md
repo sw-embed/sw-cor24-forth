@@ -83,19 +83,37 @@ with an 8-line `DIGIT-VALUE` helper. Asm `do_number` (~190 lines)
 **stays** — same wiring pattern as 17/18. Net: **0 asm lines**
 (plan expected ~220; deferred to 20).
 
+### Subset 20 — `INTERPRET` and `QUIT` to Forth — DONE (partial, *current*)
+
+Forth `INTERPRET` and `QUIT` added to `highlevel.fth`; their CFAs
+installed in a new `QUIT-VECTOR` primitive and QUIT invoked at the
+end of the file to hand control off the asm bootstrap. Once that
+line runs, all subsequent input (including `examples/*.fth`) flows
+through Forth. `stack_underflow_err` reworked to prefer Forth QUIT
+when the vector is set; falls back to asm `do_quit` during bootstrap.
+
+**Plan claimed ~180 asm lines saved. Actual: +29 (kernel grew).**
+The aspirational "~30-line bootstrap" was wrong: the asm boot loop
+genuinely needs STATE + IMMEDIATE + compile-mode to parse runtime.fth
+at all. The ~580-line asm bodies (`do_word`/`do_find`/`do_number`)
+plus the ~280-line `do_interpret`/`do_quit`/`stack_underflow_err`
+stay because the bootstrap still references them by address.
+
+**What actually landed:** the runtime REPL (post-boot) is written
+in Forth — the portable surface that will migrate unchanged to
+RCA1802, IBM 1130, IBM 360, and beyond. Further kernel shrinkage
+is deferred to the `forth-from-forth` / pre-compiled-image track.
+
 ## Upcoming
-
-### Subset 20 — `INTERPRET` and `QUIT` to Forth
-The outer loop becomes a Forth `BEGIN…UNTIL` over
-`WORD`/`FIND`/`EXECUTE`/`NUMBER`. The asm kernel keeps a tiny
-~30-line bootstrap loop just to load `runtime.fth`.
-
-Saves ~180 asm lines.
 
 ### Subset 21 — re-baseline reg-rs tests
 Re-run the existing reg-rs suite against `forth-on-forthish/kernel.s`,
 adjust instruction budgets where needed, capture new baselines under
-`reg-rs/tf24a_fof_*`.
+`reg-rs/tf24a_fof_*`. Note: the `grep -A 100 '^UART output:'`
+preprocess used by the existing baselines is too narrow after
+subset 20 (the Forth handoff adds ~22 " ok" lines during highlevel
+load, pushing the fib output past the 100-line window). Widen the
+window (or switch to a tail-oriented pattern) before capturing.
 
 ## Open questions
 

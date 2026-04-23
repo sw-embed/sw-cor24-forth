@@ -45,7 +45,7 @@ _start:
     sw r0, 0(r2)
 
     ; Initialize system variables (r0, r2 free before Phase 1)
-    la r2, entry_bye    ; LATEST init (was entry_ver before VER moved to Forth)
+    la r2, entry_quit_vector  ; LATEST init (newest dict entry)
     la r0, var_latest_val
     sw r2, 0(r0)        ; LATEST = last dictionary entry
     la r2, dict_end
@@ -2143,7 +2143,16 @@ sue2:
     brt sue2
     pop r0
     sb r0, 0(r2)
-    ; Restart outer loop
+    ; Restart outer loop. Prefer Forth QUIT (installed in
+    ; var_quit_vector by end of core/highlevel.fth); fall back to
+    ; the asm bootstrap do_quit when the vector is still zero
+    ; (i.e., underflow during bootstrap, before QUIT is defined).
+    la r0, var_quit_vector
+    lw r0, 0(r0)
+    ceq r0, z
+    brt sue_asm_fallback
+    jmp (r0)                 ; execute Forth QUIT (r0 = its CFA)
+sue_asm_fallback:
     la r0, do_quit
     jmp (r0)
 
@@ -2435,6 +2444,24 @@ entry_bye:
 do_bye:
     bra do_bye
 
+; ------------------------------------------------------------
+; QUIT-VECTOR ( -- addr ) : Push address of the quit vector cell.
+; The cell holds the CFA of the Forth-level QUIT installed at the
+; end of core/highlevel.fth. Read by stack_underflow_err to
+; re-enter Forth QUIT after a stack reset. Zero before install —
+; fallback path restarts the asm bootstrap do_quit in that case.
+; ------------------------------------------------------------
+entry_quit_vector:
+    .word entry_bye
+    .byte 11
+    .byte 81, 85, 73, 84, 45, 86, 69, 67, 84, 79, 82   ; "QUIT-VECTOR"
+do_quit_vector:
+    la r0, var_quit_vector
+    push r0
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
 ; ============================================================
 ; System Variable Storage
 ; ============================================================
@@ -2448,6 +2475,8 @@ var_base_val:
     .word 10
 var_sp_base:
     .word 0             ; snapshot of initial sp taken at _start
+var_quit_vector:
+    .word 0             ; CFA of Forth QUIT (installed at runtime)
 
 ; ============================================================
 ; compute_hash: 2-Round 24-bit XMX hash over a counted name.

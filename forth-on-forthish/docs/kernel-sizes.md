@@ -16,7 +16,8 @@ summed Forth source lines for `runtime/minimal/lowlevel/midlevel/highlevel`.
 | dd08a94 | **subset 16** (`*`, `-`, `/MOD` → Forth) | 2617 | −68 | 3971 | 263 | deleted 3 asm arithmetic primitives (~69 lines). Kept `+` (asm; used everywhere). NEGATE moved to runtime.fth (needs INVERT). `*` = repeated-add loop, `/MOD` = repeated-subtract loop — slower than the `mul`/division-loop asm but within fib's 800M-instruction budget |
 | 37b1a68 | **subset 17** (WORD → Forth + WORD-BUFFER/EOL-FLAG prims) | 2628 | **+11** | 3981 | 302 | User-level WORD is now 29-line Forth colon def in lowlevel.fth. Asm `do_word` body **stays** (~140 lines): INTERPRET and tick_word_cfa call it via `.word do_word` directly; no way to replace with Forth WORD's CFA until INTERPRET itself moves to Forth (subset 20). Added WORD-BUFFER and EOL-FLAG primitives (exposing addresses) as 22-line pair. Removed EOL! primitive (~15 lines) — minimal.fth's `\` now uses `1 EOL-FLAG C!`. |
 | 01a44bb | **subset 18** (FIND → Forth; PICK added) | 2630 | **+2** | 3973 | 353 | User-visible FIND is a 30-line Forth colon def in highlevel.fth with a 12-line STR= helper. Asm `do_find` body **stays** (~250 lines) — same reason as do_word: INTERPRET and tick_word_cfa reference it by address. Added PICK (1 line) in lowlevel.fth. Removed entry_find dict entry (4 lines); replaced with 4-line comment. No asm shrink. |
-| *current* | **subset 19** (NUMBER → Forth; DIGIT-VALUE) | 2630 | **0** | 3963 | 403 | User-visible NUMBER is a ~25-line Forth colon def using a DIGIT-VALUE helper. Asm `do_number` body **stays** (~190 lines) — INTERPRET's thread references it by address, same pattern as WORD/FIND. Dict-entry-for-comment swap is zero-sum. |
+| 62daabb | **subset 19** (NUMBER → Forth; DIGIT-VALUE) | 2630 | **0** | 3963 | 403 | User-visible NUMBER is a ~25-line Forth colon def using a DIGIT-VALUE helper. Asm `do_number` body **stays** (~190 lines) — INTERPRET's thread references it by address, same pattern as WORD/FIND. Dict-entry-for-comment swap is zero-sum. |
+| *current* | **subset 20** (INTERPRET/QUIT → Forth; QUIT-VECTOR prim) | 2659 | **+29** | — | 450 | Forth `INTERPRET` (~20 lines) and `QUIT` (~5 lines) added to `highlevel.fth`; invoked at end of file after installing the CFA in `QUIT-VECTOR` (new asm primitive, ~13 lines). Asm bootstrap `do_interpret` / `do_quit` / `do_quit_ok` / `do_quit_restart` / `stack_underflow_err` **all stay**. Once Forth QUIT takes over (last line of highlevel.fth), bootstrap never resumes — subsequent lines including `examples/*.fth` flow through Forth. `stack_underflow_err` modified to prefer `QUIT-VECTOR` when set, falling back to asm `do_quit` when still zero (underflow during bootstrap). **Kernel grows 29 lines in this step** — the big deletion (asm INTERPRET/QUIT/underflow handler + `do_word`/`do_find`/`do_number` bodies, ~900 lines) is staged for a later subset, once the bootstrap itself moves to Forth or to a pre-compiled image. |
 
 **14A + 14B net**: +57 − 97 = **−40 lines** of asm. Five stack ops now live
 in 5 lines of `core/runtime.fth` (DUP, DROP, OVER, SWAP, R@ each one line).
@@ -48,6 +49,23 @@ asm bodies (do_word 140, do_find 250, do_number 190) total ~580
 lines of asm that all delete together in subset 20 when INTERPRET
 moves to Forth.
 
+**Cumulative 14+15+16+17+18+19+20**: −99 asm lines (subset 20 added
+29 for `QUIT-VECTOR` primitive + underflow-handler modifications).
+Core tier 450 lines (+47 for Forth INTERPRET/QUIT and the bootstrap
+handoff lines). **The anticipated subset-20 ~580-line asm deletion
+does NOT land here.** The bootstrap asm `do_interpret` still runs
+during `.fth` loading and references `do_word`/`do_find`/`do_number`
+by address — those three bodies stay alive for the bootstrap's
+benefit even though Forth `INTERPRET` uses Forth WORD/FIND/NUMBER
+exclusively post-handoff. Deleting the bootstrap (and thus the
+three referenced bodies) requires either moving the bootstrap into
+Forth too — circular without a pre-compiled dict image — or
+shipping to the `forth-from-forth` / phase-4 track. Kept as
+unfinished work for a future subset. Value delivered here: the
+**runtime** outer loop is Forth, which is the portable surface
+that will migrate to RCA1802 / IBM 1130 / IBM 360 targets without
+rewriting INTERPRET/QUIT.
+
 ## Plan's claimed per-subset savings vs. actual
 
 From `docs/plan.md` estimates:
@@ -60,14 +78,18 @@ From `docs/plan.md` estimates:
 | 17 (`WORD` to Forth, + `WORD-BUFFER` prim) | ~150 | **+11** | Plan was wrong about this one. asm `do_word` can't go until INTERPRET is itself Forth (subset 20), because INTERPRET's thread (`.word do_word`) references the asm routine by address, not CFA. Subset 17 is really "wire up the Forth-level WORD and primitives it needs so subset 20 has something to call". Real savings (~140 lines) deferred to subset 20. |
 | 18 (`FIND` to Forth) | ~200 | **+2** | Same "wiring" pattern as 17. asm do_find (~250 lines) + hash table + lookaside (~300 more lines) all stay until INTERPRET moves in subset 20. Forth FIND (30 lines), STR= helper (12), PICK (1) added to core tier. |
 | 19 (`NUMBER` to Forth) | ~220 | **0** | Same wiring. asm do_number (~190 lines) stays. Forth NUMBER (~25) + DIGIT-VALUE (~8) added to core tier. |
-| 19 (`NUMBER` to Forth) | ~220 | TBD | |
-| 20 (`INTERPRET`/`QUIT` to Forth) | ~180 | TBD | |
+| 20 (`INTERPRET`/`QUIT` to Forth) | ~180 | **+29** | Plan was aspirational. The asm bootstrap needs STATE/IMMEDIATE/compile-mode to load `runtime.fth` — nowhere near the "30-line" bootstrap the plan hoped for. Forth INTERPRET/QUIT shipped (post-boot REPL runs through Forth), but the asm side grew 29 lines for `QUIT-VECTOR` + underflow-handler indirection. Deleting the ~580-line asm bodies (do_word/do_find/do_number) + ~200 line asm do_interpret needs either a pre-compiled boot image or a move to `forth-from-forth` — deferred. |
 
-**Aspirational end-state**: ~800 lines. **Realistic projection after 14A+14B
-calibration**: if each remaining subset yields 60–70% of its claimed savings
-(~460 lines total), kernel lands around **2260 lines**. Getting below 1000
-would require additional moves (UART drivers, dictionary helpers, the hash
-infrastructure) not in the current plan.
+**Aspirational end-state**: ~800 lines. **Realistic projection after subset 20**:
+kernel landed at 2659 lines (up 29 from subset 19), **well above the ~800
+target**. The ≤800 number assumed a trivial asm bootstrap, which is not
+achievable while the bootstrap itself is responsible for compiling the
+first-phase Forth words. Kernel shrinkage in phase 3 is effectively
+plateaued here; further reduction is a goal for the `forth-from-forth`
+track (pre-compiled dict images, cross-compiled kernel). The phase-3
+value that did ship is architectural: the user-visible INTERPRET/QUIT
+loop is in Forth, so porting to RCA1802 / IBM 1130 / IBM 360 need only
+rewrite the asm primitives and bootstrap — not the outer interpreter.
 
 ## Method note
 

@@ -224,3 +224,51 @@
     THEN
     @ 0
   UNTIL ;
+
+\ ---- Subset 20: INTERPRET + QUIT moved to Forth ----
+\ Reads tokens until WORD returns empty (EOL). Per token:
+\   found → IMMEDIATE or STATE=0 ⇒ EXECUTE; else compile with `,`
+\   not found → NUMBER; success ⇒ push or compile LIT+n; fail ⇒ "? "
+\ Mirrors asm do_interpret's visible behavior. The `LIT LIT` pair
+\ in the compile-literal arm is the standard trick to push LIT's own
+\ CFA at runtime (first LIT pushes the cell that follows, which is
+\ another LIT_cfa) so we can `,` it into the caller's definition.
+: INTERPRET ( -- )
+  BEGIN
+    WORD
+    DUP C@ 0= IF DROP EXIT THEN
+    FIND
+    DUP IF
+      STATE @ 0= OVER 1 = OR IF
+        DROP EXECUTE
+      ELSE
+        DROP ,
+      THEN
+    ELSE
+      DROP
+      NUMBER
+      IF
+        DROP 63 EMIT 32 EMIT
+      ELSE
+        STATE @ IF LIT LIT , , THEN
+      THEN
+    THEN
+  AGAIN
+;
+
+\ Outer REPL loop. Prints space-o-k-LF after each interpret-mode
+\ line; silent in compile mode. Never returns. Installed in
+\ QUIT-VECTOR so stack_underflow_err can re-enter after reset.
+: QUIT ( -- )
+  BEGIN
+    INTERPRET
+    STATE @ 0= IF 32 EMIT 111 EMIT 107 EMIT 10 EMIT THEN
+  AGAIN
+;
+
+\ Hand control from asm bootstrap to Forth QUIT. The asm do_quit /
+\ do_quit_ok / do_quit_restart continue to drive lines up to this
+\ point; once QUIT executes here it never returns, and all
+\ subsequent input (including examples/*.fth) flows through Forth.
+' QUIT QUIT-VECTOR !
+QUIT

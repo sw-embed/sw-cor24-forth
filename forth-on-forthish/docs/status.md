@@ -1,6 +1,6 @@
 # Status — forth-on-forthish
 
-Last updated: 2026-04-22
+Last updated: 2026-04-22 (subset 20 partial)
 
 ## Progress
 
@@ -15,7 +15,7 @@ Last updated: 2026-04-22
 | 17 | `WORD` → Forth (`WORD-BUFFER`/`EOL-FLAG` prims added) | done | 37b1a68 |
 | 18 | `FIND` → Forth (`PICK` added) | done | 01a44bb |
 | 19 | `NUMBER` → Forth (`DIGIT-VALUE` helper) | done | 62daabb |
-| 20 | `INTERPRET`/`QUIT` → Forth | pending | — |
+| 20 | `INTERPRET`/`QUIT` → Forth (+ `QUIT-VECTOR` prim) | done (partial) | *current* |
 | 21 | Re-baseline reg-rs against this kernel | pending | — |
 
 ## Orthogonal work (not subset-numbered)
@@ -39,21 +39,24 @@ examples/14-fib.fth` — `1 1 2 3 5 8 13 21 34 55 89` — captured as
 
 ## Line counts
 
-| File | Subset 13 + #2 | Now (after subset 19) | Target (after subset 21) |
-|------|---------------:|----------------------:|-------------------------:|
-| `kernel.s` | 2758 | 2630 | ≤ 800 |
-| `core/runtime.fth` | 2 | 13 | ~150 |
-| `core/minimal.fth` | 18 | 18 | 15 |
-| `core/lowlevel.fth` | 55 | 121 | ~80 |
-| `core/midlevel.fth` | 25 | 25 | 25 |
-| `core/highlevel.fth` | 129 | 226 | 129 |
+| File | Subset 13 + #2 | Now (after subset 20) |
+|------|---------------:|----------------------:|
+| `kernel.s` | 2758 | 2659 |
+| `core/runtime.fth` | 2 | 13 |
+| `core/minimal.fth` | 18 | 18 |
+| `core/lowlevel.fth` | 55 | 121 |
+| `core/midlevel.fth` | 25 | 25 |
+| `core/highlevel.fth` | 129 | 274 |
 
-Cumulative asm savings through subset 19: **−128 lines** (2758 → 2630).
-Three big asm bodies (`do_word` ~140, `do_find` ~250, `do_number`
-~190 ≈ 580 lines) are staged for a single subset 20 delete once
-`INTERPRET` moves to Forth and stops referencing them by address.
-See `docs/kernel-sizes.md` for the per-subset breakdown and
-plan-vs-actual comparison.
+Cumulative asm savings through subset 20: **−99 lines** (2758 → 2659).
+The original ≤800-line target is no longer realistic in phase 3:
+the asm bootstrap can't shrink below the STATE/IMMEDIATE/compile-mode
+logic needed to load `runtime.fth`, and the three big asm bodies
+(`do_word` ~140, `do_find` ~250, `do_number` ~190 ≈ 580 lines) must
+stay alive for the bootstrap. Deleting them requires either a
+pre-compiled dict image or the `forth-from-forth` cross-compiled
+kernel — deferred out of phase 3. See `docs/kernel-sizes.md` for
+the per-subset breakdown and plan-vs-actual.
 
 ## Verified compatibility
 
@@ -63,9 +66,10 @@ tests pass at HEAD (62daabb).
 
 ## Next action
 
-Subset 20: move `INTERPRET` and `QUIT` to Forth. Keep a minimal asm
-bootstrap (STATE + IMMEDIATE + compile-mode) sufficient to compile
-`core/runtime.fth` into Forth `INTERPRET`/`QUIT`, then hand control
-to Forth `QUIT`. This unblocks deleting `do_word`, `do_find`,
-`do_number` bodies (~580 asm lines) and the current monolithic
-`do_interpret`/`do_quit`/`stack_underflow_err` (~280 asm lines).
+Subset 21: re-baseline `reg-rs/tf24a_*` against the current
+kernel. The `grep -A 100` preprocess windows are too narrow now
+that the Forth handoff inserts extra " ok" lines during highlevel
+load; widen the window (or switch to tail-oriented matching) so
+that fib-output bytes at the end of UART are actually captured
+by the baseline. After re-baselining, phase 3 is complete; further
+kernel shrinkage moves to `forth-from-forth` / phase 4.
