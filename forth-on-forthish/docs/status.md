@@ -1,6 +1,6 @@
 # Status — forth-on-forthish
 
-Last updated: 2026-04-22 (subset 20 partial)
+Last updated: 2026-04-22 (phase 3 complete — subsets 12–21 done)
 
 ## Progress
 
@@ -15,8 +15,8 @@ Last updated: 2026-04-22 (subset 20 partial)
 | 17 | `WORD` → Forth (`WORD-BUFFER`/`EOL-FLAG` prims added) | done | 37b1a68 |
 | 18 | `FIND` → Forth (`PICK` added) | done | 01a44bb |
 | 19 | `NUMBER` → Forth (`DIGIT-VALUE` helper) | done | 62daabb |
-| 20 | `INTERPRET`/`QUIT` → Forth (+ `QUIT-VECTOR` prim) | done (partial) | *current* |
-| 21 | Re-baseline reg-rs against this kernel | pending | — |
+| 20 | `INTERPRET`/`QUIT` → Forth (+ `QUIT-VECTOR` prim) | done (partial) | 1c44e0d |
+| 21 | Re-baseline reg-rs against this kernel | done | *current* |
 
 ## Orthogonal work (not subset-numbered)
 
@@ -66,10 +66,10 @@ tests pass at HEAD (62daabb).
 
 ## Next action
 
-Subset 21: re-baseline `reg-rs/tf24a_*` against the current
-kernel. The `grep -A 100` preprocess windows are too narrow now
-that the Forth handoff inserts extra " ok" lines during highlevel
-load; widen the window (or switch to tail-oriented matching) so
-that fib-output bytes at the end of UART are actually captured
-by the baseline. After re-baselining, phase 3 is complete; further
-kernel shrinkage moves to `forth-from-forth` / phase 4.
+Phase 3 is complete. Further kernel shrinkage moves to the
+`forth-from-forth` track (phase 4): cross-compiled kernel, or
+pre-compiled dictionary image so the asm bootstrap no longer needs
+`do_word`/`do_find`/`do_number`. The existing forth-on-forthish
+kernel stays as the baseline Forth-on-asm implementation — the
+portable surface (Forth INTERPRET/QUIT) that will migrate to
+RCA1802, IBM 1130, IBM 360 without rewrite.

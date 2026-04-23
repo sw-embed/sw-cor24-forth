@@ -104,16 +104,28 @@ in Forth — the portable surface that will migrate unchanged to
 RCA1802, IBM 1130, IBM 360, and beyond. Further kernel shrinkage
 is deferred to the `forth-from-forth` / pre-compiled-image track.
 
-## Upcoming
+### Subset 21 — re-baseline reg-rs tests — DONE (*current*)
 
-### Subset 21 — re-baseline reg-rs tests
-Re-run the existing reg-rs suite against `forth-on-forthish/kernel.s`,
-adjust instruction budgets where needed, capture new baselines under
-`reg-rs/tf24a_fof_*`. Note: the `grep -A 100 '^UART output:'`
-preprocess used by the existing baselines is too narrow after
-subset 20 (the Forth handoff adds ~22 " ok" lines during highlevel
-load, pushing the fib output past the 100-line window). Widen the
-window (or switch to a tail-oriented pattern) before capturing.
+Only one reg-rs test targets `forth-on-forthish/kernel.s`:
+`tf24a_fof_fib`. Preprocess widened from `grep -A 100` to
+`grep -A 250` so the fib numbers actually land inside the captured
+window (subset 20 added ~22 " ok" lines during highlevel load,
+pushing the fib output past line 100). Baseline rebased with
+`reg-rs rebase`; repo's `reg-rs/tf24a_fof_fib.{rgt,out}` updated
+to match `~/.local/reg-rs/`. All 65 `tf24a` tests pass.
+
+## Phase 3 complete
+
+The forth-on-forthish track is complete at this scope. Kernel
+landed at **2659 asm lines**, 99 below pre-subset-14 baseline but
+well above the aspirational ≤800. Core Forth tier grew from 229
+to 450 lines. The runtime REPL is now in Forth.
+
+Further kernel shrinkage moves to the `forth-from-forth` / phase 4
+track: cross-compiled kernel or pre-compiled dictionary image,
+which would let us delete the asm bootstrap (including `do_word`,
+`do_find`, `do_number` bodies ≈ 580 asm lines, plus
+`do_interpret`/`do_quit` ≈ 280 lines).
 
 ## Open questions
 
