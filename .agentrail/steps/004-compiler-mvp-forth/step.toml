@@ -1,0 +1,11 @@
+number = 4
+slug = "compiler-mvp-forth"
+status = "in-progress"
+description = """
+Build the minimum viable pure-Forth cross-compiler that can
+process `forth-fr..."""
+role = "production"
+context_files = []
+created_at = "2026-04-23T16:11:43"
+task_type = "feature"
+commits = []

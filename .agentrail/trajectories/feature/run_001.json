@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 2,
+    "step": "scaffold"
+  },
+  "action": "cp the kernel/core/scripts files across. sed-updated script header comments in-place. Wrote 4 new docs files + updated design.md location. Ran reg-rs create + rebase cycle to seed the baseline, then copied .rgt/.out into repo reg-rs/. Verified end-to-end via scripts/demo.sh and full reg-rs suite.",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-04-23T13:57:45"
+}

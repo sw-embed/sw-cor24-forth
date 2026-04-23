@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# build-kernel.sh — regenerate forth-from-forth/kernel.s from source.
+# build-kernel.sh — run the forth-from-forth cross-compiler.
 #
-# Pipeline:
-#   cat xcomp.fth + prims.fth + core/*.fth + "COMPILE-KERNEL"
-#   | cor24-run --run forth-on-forthish/kernel.s --terminal
-#   | sed to strip !!BEGIN-KERNEL!! / !!END-KERNEL!! markers
-#   > forth-from-forth/kernel.s
+# Pipes xcomp.fth + "COMPILE-RUNTIME" into the phase-3
+# forth-on-forthish REPL via cor24-run's -u (UART input) flag.
+# Captures UART output, strips everything outside the
+# !!BEGIN-KERNEL!! / !!END-KERNEL!! markers, strips the REPL's
+# per-line " ok" chrome from the captured payload, and writes
+# the result to forth-from-forth/compiler/out/runtime-dict.s.
 #
-# Step 002 ships this script as a stub that exits early. Step 003
-# wires up the MVP that handles core/runtime.fth end-to-end, and
-# step 005 extends coverage to the full core tier.
+# Step 004a: the compiler emits only a test-payload ("hello from
+# xcomp") between the markers, proving the pipeline works.
+# Step 004b+ replace the payload with the real asm text for
+# core/runtime.fth's 10 colon defs.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -17,27 +19,35 @@ ROOT="$(cd "$HERE/../.." && pwd)"
 FFF="$HERE/.."
 FOF="$ROOT/forth-on-forthish"
 
-echo "build-kernel.sh: stub (step 002). Cross-compiler pipeline" \
-     "activates in step 003." >&2
-echo "Until then, forth-from-forth/kernel.s is a verbatim phase-3 copy." >&2
-exit 0
+OUT_DIR="$FFF/compiler/out"
+OUT_FILE="$OUT_DIR/runtime-dict.s"
 
-# --- below this line: the pipeline that step 003 turns on ---
+mkdir -p "$OUT_DIR"
 
 cd "$ROOT"
 
-{
+# UART input: all 5 core tiers (so the phase-3 REPL has its Forth
+# dictionary built, including BEGIN/UNTIL/CREATE/etc.), then
+# xcomp.fth's definitions, then invoke COMPILE-RUNTIME.
+# Trailing newline after COMPILE-RUNTIME so the REPL reads it.
+INPUT="$(
+  cat "$FFF/core/runtime.fth"
+  cat "$FFF/core/minimal.fth"
+  cat "$FFF/core/lowlevel.fth"
+  cat "$FFF/core/midlevel.fth"
+  cat "$FFF/core/highlevel.fth"
   cat "$FFF/compiler/xcomp.fth"
-  cat "$FFF/core/prims.fth"
-  for tier in runtime minimal lowlevel midlevel highlevel; do
-    cat "$FFF/core/$tier.fth"
-  done
-  echo 'COMPILE-KERNEL'
-} \
-  | cor24-run --run "$FOF/kernel.s" --terminal --speed 0 -n 2000000000 2>&1 \
+)
+COMPILE-RUNTIME
+"
+
+cor24-run --run "$FOF/kernel.s" -u "$INPUT" --speed 0 -n 800000000 2>&1 \
+  | grep -A 1000 '^UART output:' \
   | sed -n '/^!!BEGIN-KERNEL!!$/,/^!!END-KERNEL!!$/p' \
   | sed '1d;$d' \
-  > "$FFF/kernel.s.new"
+  | grep -v '^ ok$' \
+  > "$OUT_FILE"
 
-mv "$FFF/kernel.s.new" "$FFF/kernel.s"
-echo "Regenerated $FFF/kernel.s ($(wc -l < "$FFF/kernel.s") lines)" >&2
+echo "build-kernel.sh: wrote $OUT_FILE" >&2
+echo "  contents ($(wc -l < "$OUT_FILE") lines):" >&2
+sed 's/^/    /' "$OUT_FILE" >&2

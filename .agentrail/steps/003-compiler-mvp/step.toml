@@ -1,11 +1,12 @@
 number = 3
 slug = "compiler-mvp"
-status = "pending"
+status = "completed"
 description = """
 Build the minimum viable cross-compiler that can digest
 `forth-from-forth/cor..."""
 role = "production"
 context_files = []
 created_at = "2026-04-22T19:33:16"
+completed_at = "2026-04-23T16:12:47"
 task_type = "feature"
-commits = []
+commits = ["8001efb6c1950e2aee4f841fed484cbcc55c8a5e"]

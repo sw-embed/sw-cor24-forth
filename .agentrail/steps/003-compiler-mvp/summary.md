@@ -1,0 +1,1 @@
+Step prompt superseded by revised design.md from step 001. Work shifted to newly-inserted step 004-compiler-mvp-forth with corrected scope (Forth-hosted compiler emitting asm text, not Python emitting binary).
