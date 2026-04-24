@@ -172,3 +172,69 @@ fff_cfa_NEGATE:
 .word 1
 .word do_plus
 .word do_exit
+fff_entry_MINUS:
+.word fff_entry_NEGATE
+.byte 1
+.byte 45
+fff_cfa_MINUS:
+.byte 125
+.byte 41
+.word do_docol_far
+.byte 38
+.word fff_cfa_NEGATE
+.word do_plus
+.word do_exit
+fff_entry_COLON:
+.word fff_entry_MINUS
+.byte 1
+.byte 58
+fff_cfa_COLON:
+.byte 125
+.byte 41
+.word do_docol_far
+.byte 38
+.word do_create
+.word do_comma_docol
+.word do_latest
+.word do_fetch
+.word do_lit
+.word 3
+.word do_plus
+.word fff_cfa_DUP
+.word do_cfetch
+.word do_lit
+.word 64
+.word fff_cfa_OR
+.word fff_cfa_SWAP
+.word do_cstore
+.word do_rbrac
+.word do_exit
+fff_entry_SEMI:
+.word fff_entry_COLON
+.byte 129
+.byte 59
+fff_cfa_SEMI:
+.byte 125
+.byte 41
+.word do_docol_far
+.byte 38
+.word do_lit
+.word do_exit
+.word do_comma
+.word do_latest
+.word do_fetch
+.word do_lit
+.word 3
+.word do_plus
+.word fff_cfa_DUP
+.word do_cfetch
+.word do_lit
+.word 191
+.word fff_cfa_AND
+.word fff_cfa_SWAP
+.word do_cstore
+.word do_lit
+.word 0
+.word do_state
+.word do_store
+.word do_exit

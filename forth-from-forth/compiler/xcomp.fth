@@ -266,6 +266,87 @@ STR: fff-cfa-negate  14 C,
   78 C, 69 C, 71 C, 65 C, 84 C, 69 C,
 
 \ ============================================================
+\ Additional primitive labels needed for - : ; defs
+\ ============================================================
+
+\ "do_create" — 9 chars
+STR: label-create  9 C,
+  100 C, 111 C, 95 C,
+  99 C, 114 C, 101 C, 97 C, 116 C, 101 C,
+
+\ "do_comma_docol" — 14 chars
+STR: label-comma-docol  14 C,
+  100 C, 111 C, 95 C,
+  99 C, 111 C, 109 C, 109 C, 97 C, 95 C,
+  100 C, 111 C, 99 C, 111 C, 108 C,
+
+\ "do_latest" — 9 chars
+STR: label-latest  9 C,
+  100 C, 111 C, 95 C,
+  108 C, 97 C, 116 C, 101 C, 115 C, 116 C,
+
+\ "do_rbrac" — 8 chars
+STR: label-rbrac  8 C,
+  100 C, 111 C, 95 C,
+  114 C, 98 C, 114 C, 97 C, 99 C,
+
+\ "do_state" — 8 chars
+STR: label-state  8 C,
+  100 C, 111 C, 95 C,
+  115 C, 116 C, 97 C, 116 C, 101 C,
+
+\ "do_cfetch" — 9 chars
+STR: label-cfetch  9 C,
+  100 C, 111 C, 95 C,
+  99 C, 102 C, 101 C, 116 C, 99 C, 104 C,
+
+\ "do_cstore" — 9 chars
+STR: label-cstore  9 C,
+  100 C, 111 C, 95 C,
+  99 C, 115 C, 116 C, 111 C, 114 C, 101 C,
+
+\ "do_comma" — 8 chars
+STR: label-comma  8 C,
+  100 C, 111 C, 95 C,
+  99 C, 111 C, 109 C, 109 C, 97 C,
+
+\ ============================================================
+\ Additional Forth-def labels for -, :, ;
+\ ============================================================
+\ The actual NAMES (byte values 45, 58, 59) are non-alphanumeric,
+\ so labels use spelled-out forms: MINUS, COLON, SEMI.
+
+\ "fff_entry_MINUS" — 15 chars
+STR: fff-entry-minus  15 C,
+  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
+  77 C, 73 C, 78 C, 85 C, 83 C,
+
+\ "fff_cfa_MINUS" — 13 chars
+STR: fff-cfa-minus  13 C,
+  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
+  77 C, 73 C, 78 C, 85 C, 83 C,
+
+\ "fff_entry_COLON" — 15 chars
+STR: fff-entry-colon  15 C,
+  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
+  67 C, 79 C, 76 C, 79 C, 78 C,
+
+\ "fff_cfa_COLON" — 13 chars
+STR: fff-cfa-colon  13 C,
+  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
+  67 C, 79 C, 76 C, 79 C, 78 C,
+
+\ "fff_entry_SEMI" — 14 chars
+STR: fff-entry-semi  14 C,
+  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
+  83 C, 69 C, 77 C, 73 C,
+
+\ "fff_cfa_SEMI" — 12 chars
+STR: fff-cfa-semi  12 C,
+  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
+  83 C, 69 C, 77 C, 73 C,
+
+\ ============================================================
 \ Def emission helpers
 \ ============================================================
 
@@ -459,6 +540,78 @@ STR: fff-cfa-negate  14 C,
   label-exit     EMIT-WORD-LABEL
 ;
 
+\ ----- MINUS: : - NEGATE + ; -----
+: EMIT-MINUS
+  fff-entry-minus EMIT-LABEL-DEF
+  fff-entry-negate EMIT-WORD-LABEL
+  1 EMIT-BYTE-LITERAL         \ namelen
+  45 EMIT-BYTE-LITERAL         \ '-'
+  fff-cfa-minus EMIT-LABEL-DEF
+  EMIT-FAR-DOCOL
+  fff-cfa-negate EMIT-WORD-LABEL
+  label-plus     EMIT-WORD-LABEL
+  label-exit     EMIT-WORD-LABEL
+;
+
+\ ----- COLON: : : CREATE ,DOCOL LATEST @ 3 + DUP C@ 64 OR SWAP C! ] ; -----
+: EMIT-COLON
+  fff-entry-colon EMIT-LABEL-DEF
+  fff-entry-minus EMIT-WORD-LABEL
+  1 EMIT-BYTE-LITERAL          \ namelen
+  58 EMIT-BYTE-LITERAL          \ ':'
+  fff-cfa-colon EMIT-LABEL-DEF
+  EMIT-FAR-DOCOL
+  label-create      EMIT-WORD-LABEL
+  label-comma-docol EMIT-WORD-LABEL
+  label-latest      EMIT-WORD-LABEL
+  label-fetch       EMIT-WORD-LABEL
+  label-lit         EMIT-WORD-LABEL
+  3                 EMIT-WORD-LITERAL
+  label-plus        EMIT-WORD-LABEL
+  fff-cfa-dup       EMIT-WORD-LABEL
+  label-cfetch      EMIT-WORD-LABEL
+  label-lit         EMIT-WORD-LABEL
+  64                EMIT-WORD-LITERAL
+  fff-cfa-or        EMIT-WORD-LABEL
+  fff-cfa-swap      EMIT-WORD-LABEL
+  label-cstore      EMIT-WORD-LABEL
+  label-rbrac       EMIT-WORD-LABEL
+  label-exit        EMIT-WORD-LABEL
+;
+
+\ ----- SEMI: : ; ['] EXIT , LATEST @ 3 + DUP C@ 191 AND SWAP C! 0 STATE ! ; IMMEDIATE -----
+\ IMMEDIATE: flags_len byte = 128 + namelen = 128 + 1 = 129.
+\ `['] EXIT` at source-parse time pushes do_exit's CFA. In the
+\ compiled body it becomes `LIT do_exit`.
+: EMIT-SEMI
+  fff-entry-semi EMIT-LABEL-DEF
+  fff-entry-colon EMIT-WORD-LABEL
+  129 EMIT-BYTE-LITERAL         \ flags_len = IMMEDIATE | 1
+  59 EMIT-BYTE-LITERAL           \ ';'
+  fff-cfa-semi EMIT-LABEL-DEF
+  EMIT-FAR-DOCOL
+  label-lit         EMIT-WORD-LABEL   \ ['] EXIT → push do_exit
+  label-exit        EMIT-WORD-LABEL   \ the EXIT cfa as LIT operand
+  label-comma       EMIT-WORD-LABEL   \ , — compile it
+  label-latest      EMIT-WORD-LABEL
+  label-fetch       EMIT-WORD-LABEL
+  label-lit         EMIT-WORD-LABEL
+  3                 EMIT-WORD-LITERAL
+  label-plus        EMIT-WORD-LABEL
+  fff-cfa-dup       EMIT-WORD-LABEL
+  label-cfetch      EMIT-WORD-LABEL
+  label-lit         EMIT-WORD-LABEL
+  191               EMIT-WORD-LITERAL
+  fff-cfa-and       EMIT-WORD-LABEL
+  fff-cfa-swap      EMIT-WORD-LABEL
+  label-cstore      EMIT-WORD-LABEL
+  label-lit         EMIT-WORD-LABEL
+  0                 EMIT-WORD-LITERAL
+  label-state       EMIT-WORD-LABEL
+  label-store       EMIT-WORD-LABEL
+  label-exit        EMIT-WORD-LABEL
+;
+
 \ ============================================================
 \ Top-level driver
 \ ============================================================
@@ -476,5 +629,8 @@ STR: fff-cfa-negate  14 C,
   EMIT-OR
   EMIT-XOR
   EMIT-NEGATE
+  EMIT-MINUS
+  EMIT-COLON
+  EMIT-SEMI
   marker-end EMIT-COUNTED NL
 ;

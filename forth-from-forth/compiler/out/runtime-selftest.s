@@ -208,6 +208,31 @@ do_bye:
     bra do_bye
 
 ; ============================================================
+; Stubs for primitives referenced by emitted COLON/SEMI defs.
+; These paths aren't exercised by the self-test (which only
+; touches runtime arithmetic/stack defs, not the colon-compiler
+; machinery); we define them as bra-self halts so assembly
+; resolves. If any of them IS reached accidentally, we see a
+; self-branch halt and know which one via --dump.
+; ============================================================
+do_create:
+    bra do_create
+do_comma_docol:
+    bra do_comma_docol
+do_latest:
+    bra do_latest
+do_rbrac:
+    bra do_rbrac
+do_state:
+    bra do_state
+do_cfetch:
+    bra do_cfetch
+do_cstore:
+    bra do_cstore
+do_comma:
+    bra do_comma
+
+; ============================================================
 ; System variable storage (needed for sp_base snapshot)
 ; ============================================================
 var_sp_base:
@@ -347,6 +372,18 @@ test_thread:
     .word do_lit
     .word 10
     .word do_emit            ; NL → "N\n"
+
+    ; --- MINUS test: push 68 ('D'), push 3, - → 68-3 = 65 ('A'). ---
+    ; `-` is `: - NEGATE + ;`, so 68 3 - = 68 + NEGATE(3) = 68 + (-3) = 65.
+    .word do_lit
+    .word 68                 ; 'D'
+    .word do_lit
+    .word 3
+    .word fff_cfa_MINUS
+    .word do_emit            ; expect 'A'
+    .word do_lit
+    .word 10
+    .word do_emit            ; NL → "A\n"
 
     ; --- Halt ---
     ; Emit "DONE" marker, then BYE.
@@ -541,6 +578,72 @@ fff_cfa_NEGATE:
 .word do_lit
 .word 1
 .word do_plus
+.word do_exit
+fff_entry_MINUS:
+.word fff_entry_NEGATE
+.byte 1
+.byte 45
+fff_cfa_MINUS:
+.byte 125
+.byte 41
+.word do_docol_far
+.byte 38
+.word fff_cfa_NEGATE
+.word do_plus
+.word do_exit
+fff_entry_COLON:
+.word fff_entry_MINUS
+.byte 1
+.byte 58
+fff_cfa_COLON:
+.byte 125
+.byte 41
+.word do_docol_far
+.byte 38
+.word do_create
+.word do_comma_docol
+.word do_latest
+.word do_fetch
+.word do_lit
+.word 3
+.word do_plus
+.word fff_cfa_DUP
+.word do_cfetch
+.word do_lit
+.word 64
+.word fff_cfa_OR
+.word fff_cfa_SWAP
+.word do_cstore
+.word do_rbrac
+.word do_exit
+fff_entry_SEMI:
+.word fff_entry_COLON
+.byte 129
+.byte 59
+fff_cfa_SEMI:
+.byte 125
+.byte 41
+.word do_docol_far
+.byte 38
+.word do_lit
+.word do_exit
+.word do_comma
+.word do_latest
+.word do_fetch
+.word do_lit
+.word 3
+.word do_plus
+.word fff_cfa_DUP
+.word do_cfetch
+.word do_lit
+.word 191
+.word fff_cfa_AND
+.word fff_cfa_SWAP
+.word do_cstore
+.word do_lit
+.word 0
+.word do_state
+.word do_store
 .word do_exit
 
 ; === end of emitted dict ===

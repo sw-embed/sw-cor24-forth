@@ -1,0 +1,11 @@
+number = 7
+slug = "complete-runtime-emit"
+status = "in-progress"
+description = """
+Complete runtime.fth emission. Step 005 emitted 10 defs (DUP
+through NEGATE) ..."""
+role = "production"
+context_files = []
+created_at = "2026-04-23T17:23:19"
+task_type = "feature"
+commits = []

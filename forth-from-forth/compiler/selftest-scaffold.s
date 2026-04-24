@@ -208,6 +208,31 @@ do_bye:
     bra do_bye
 
 ; ============================================================
+; Stubs for primitives referenced by emitted COLON/SEMI defs.
+; These paths aren't exercised by the self-test (which only
+; touches runtime arithmetic/stack defs, not the colon-compiler
+; machinery); we define them as bra-self halts so assembly
+; resolves. If any of them IS reached accidentally, we see a
+; self-branch halt and know which one via --dump.
+; ============================================================
+do_create:
+    bra do_create
+do_comma_docol:
+    bra do_comma_docol
+do_latest:
+    bra do_latest
+do_rbrac:
+    bra do_rbrac
+do_state:
+    bra do_state
+do_cfetch:
+    bra do_cfetch
+do_cstore:
+    bra do_cstore
+do_comma:
+    bra do_comma
+
+; ============================================================
 ; System variable storage (needed for sp_base snapshot)
 ; ============================================================
 var_sp_base:
@@ -347,6 +372,18 @@ test_thread:
     .word do_lit
     .word 10
     .word do_emit            ; NL → "N\n"
+
+    ; --- MINUS test: push 68 ('D'), push 3, - → 68-3 = 65 ('A'). ---
+    ; `-` is `: - NEGATE + ;`, so 68 3 - = 68 + NEGATE(3) = 68 + (-3) = 65.
+    .word do_lit
+    .word 68                 ; 'D'
+    .word do_lit
+    .word 3
+    .word fff_cfa_MINUS
+    .word do_emit            ; expect 'A'
+    .word do_lit
+    .word 10
+    .word do_emit            ; NL → "A\n"
 
     ; --- Halt ---
     ; Emit "DONE" marker, then BYE.
