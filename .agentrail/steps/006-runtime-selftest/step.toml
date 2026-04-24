@@ -1,6 +1,6 @@
 number = 6
 slug = "runtime-selftest"
-status = "pending"
+status = "in-progress"
 description = """
 Build a runnable self-test for the emitted runtime.fth dict. The
 step-005 out..."""

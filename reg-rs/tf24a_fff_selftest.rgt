@@ -1,0 +1,5 @@
+command = "forth-from-forth/scripts/test-kernel.sh 2>/dev/null"
+timeout = 60
+preprocess = "cat"
+exit_code = 0
+desc = "self-test: run each of runtime.fth's 10 emitted colon defs through a minimal scaffold and verify UART output bytes"
