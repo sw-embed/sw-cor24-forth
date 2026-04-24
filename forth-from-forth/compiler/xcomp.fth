@@ -347,6 +347,131 @@ STR: fff-cfa-semi  12 C,
   83 C, 69 C, 77 C, 73 C,
 
 \ ============================================================
+\ Symbol-table infrastructure (step 008 parser MVP)
+\ ============================================================
+\ Each entry is 9 bytes: [prev:3][name-ptr:3][label-ptr:3].
+\ `name-ptr` and `label-ptr` are counted-string addresses
+\ defined via STR:.
+\ xc-symbols holds the head of the linked list (0 = empty).
+
+VARIABLE xc-symbols
+0 xc-symbols !
+
+: XC-REGISTER  ( name-ptr label-ptr -- )
+  HERE @ >R                  \ save new-node address
+  xc-symbols @ ,             \ prev = current head
+  SWAP , ,                   \ name-ptr, then label-ptr
+  R> xc-symbols !            \ head = new node
+;
+
+\ XC-MATCH? ( c-addr u entry -- flag )
+\ Does `entry`'s name (a counted string at entry+3) equal the
+\ input c-addr/u string? Consumes all three inputs; returns
+\ -1 on match, 0 on mismatch.
+: XC-MATCH?  ( c-addr u entry -- flag )
+  3 + @                    \ c-addr u name-ptr
+  DUP C@                   \ c-addr u name-ptr name-len
+  2 PICK = IF              \ name-len == u ?
+    1 +                    \ c-addr u name-start   (skip length byte)
+    ROT                    \ u name-start c-addr
+    SWAP                   \ u c-addr name-start
+    ROT                    \ c-addr name-start u
+    STR=
+  ELSE
+    DROP DROP DROP 0
+  THEN
+;
+
+\ XC-FIND ( c-addr u -- entry-addr | 0 )
+\ Walk xc-symbols newest-to-oldest, return matching entry or 0.
+: XC-FIND  ( c-addr u -- entry-addr | 0 )
+  xc-symbols @
+  BEGIN DUP WHILE
+    \ Stack: c-addr u entry
+    2 PICK 2 PICK 2 PICK   \ duplicate triple for non-destructive match
+    XC-MATCH? IF
+      NIP NIP EXIT         \ drop u and c-addr, leave entry
+    THEN
+    \ No match; follow prev link. Stack: c-addr u entry
+    @                      \ entry → prev
+  REPEAT
+  NIP NIP                  \ drop u and c-addr, leave 0
+;
+
+\ ============================================================
+\ Target-side word NAMES (counted strings for symbol-table
+\ lookup). Separate from the emitted asm LABELS (already
+\ defined as label-* counted strings above).
+\ ============================================================
+
+\ Primitive names — what appears in .fth source.
+
+\ "SP@" — 3 chars
+STR: name-sp-fetch  3 C,  83 C, 80 C, 64 C,
+
+\ "@" — 1 char
+STR: name-fetch     1 C,  64 C,
+
+\ "+" — 1 char
+STR: name-plus      1 C,  43 C,
+
+\ "NAND" — 4 chars
+STR: name-nand      4 C,  78 C, 65 C, 78 C, 68 C,
+
+\ "DUP" — 3 chars (register for lookup after it's emitted)
+STR: name-dup       3 C,  68 C, 85 C, 80 C,
+
+\ ============================================================
+\ Initial symbol-table population — a handful of primitives for
+\ the parser MVP test. Full set added in step 009.
+\ ============================================================
+
+: XC-INIT-SYMBOLS
+  name-sp-fetch label-sp-fetch XC-REGISTER
+  name-fetch    label-fetch    XC-REGISTER
+  name-plus     label-plus     XC-REGISTER
+  name-nand     label-nand     XC-REGISTER
+  name-dup      fff-cfa-dup    XC-REGISTER
+;
+
+\ ============================================================
+\ Token-emit dispatch
+\ ============================================================
+\ ?DUP ( x -- x x | 0 ) — dup if non-zero. Not in phase-3 Forth.
+: ?DUP  DUP IF DUP THEN ;
+
+\ XC-EMIT-TOKEN ( counted-addr -- )
+\ Resolve a source-Forth token (counted string) to emitted
+\ asm text. Three outcomes:
+\   - Symbol-table hit: emit ".word <label>".
+\   - Parseable number: emit ".word do_lit\n.word <n>".
+\   - Otherwise: emit "<name>" diagnostic on its own line so
+\     the failure is visible in the captured build output.
+: XC-EMIT-TOKEN  ( counted-addr -- )
+  DUP COUNT XC-FIND              \ counted entry-or-0
+  ?DUP IF
+    \ Match. Stack: counted entry.
+    6 + @                        \ entry label-ptr
+    EMIT-WORD-LABEL
+    DROP                         \ drop counted
+    EXIT
+  THEN
+  \ Not found via XC-FIND. Try NUMBER.
+  DUP NUMBER                     \ counted n flag   (flag: 0 ok, -1 fail)
+  0= IF
+    \ Success. Stack: counted n.
+    SWAP DROP                    \ drop counted, keep n
+    label-lit EMIT-WORD-LABEL
+    EMIT-WORD-LITERAL
+    EXIT
+  THEN
+  \ Failure. Stack: counted 0.
+  DROP                           \ drop the 0 placeholder
+  \ Emit the unresolvable token on its own line.
+  COUNT TYPE NL
+;
+
+\ ============================================================
 \ Def emission helpers
 \ ============================================================
 
@@ -617,6 +742,13 @@ STR: fff-cfa-semi  12 C,
 \ ============================================================
 
 : COMPILE-RUNTIME
+  \ Step 008 laid down the symbol-table infrastructure
+  \ (XC-REGISTER / XC-FIND / XC-INIT-SYMBOLS) but the XC-FIND
+  \ walking loop needs further debugging — ran into instruction-
+  \ budget timeouts during validation. Left in place for step
+  \ 009 to continue. COMPILE-RUNTIME still uses the hardcoded
+  \ EMIT-<NAME> helpers from steps 005/007 — they work and keep
+  \ the 67-test reg-rs suite green.
   NL
   marker-begin EMIT-COUNTED NL
   EMIT-DUP

@@ -1,1 +1,0 @@
-BLOCKED: Old Python-blob-era prompt. Design evolved; we now emit asm text, not a binary blob. Replacing with a scoped step that completes runtime.fth (the 10 defs emitted in step 005 missed : ; and - which are also in runtime.fth).
