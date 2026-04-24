@@ -1,11 +1,12 @@
 number = 6
 slug = "runtime-selftest"
-status = "in-progress"
+status = "completed"
 description = """
 Build a runnable self-test for the emitted runtime.fth dict. The
 step-005 out..."""
 role = "production"
 context_files = []
 created_at = "2026-04-23T17:02:26"
+completed_at = "2026-04-23T17:12:16"
 task_type = "feature"
-commits = []
+commits = ["7ce63f454a2cc58af514ce7f55d8a03ebbf2da7a"]

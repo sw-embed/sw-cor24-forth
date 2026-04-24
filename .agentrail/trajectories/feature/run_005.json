@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 6,
+    "step": "runtime-selftest"
+  },
+  "action": "Copied 14 primitive bodies from forth-on-forthish/kernel.s (stripping underflow-check jumps since scaffold has no stack_underflow_err). Hand-coded test_thread with ASCII-byte operands chosen so each test produces a printable result: '5' AND '3' = '1', 'A' XOR 1 = '@', double-INVERT/NEGATE identity for the bitwise ones. Fixed a do_store bug where r2 was clobbered before IP saved. Created test-kernel.sh driver; seeded reg-rs baseline; synced to repo.",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-04-23T17:12:16"
+}
