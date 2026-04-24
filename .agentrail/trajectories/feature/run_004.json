@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 5,
+    "step": "emit-runtime-asm"
+  },
+  "action": "Built hardcoded per-def emitters on top of step-004a's string machinery. Defined N. by copying phase-3 . and stripping the trailing-space EMIT. Created ~400 lines of xcomp.fth with STR: constants and EMIT-* helpers. Verified via cor24-run --assemble with a 13-line scaffold providing bra-self stubs for the 12 primitive labels. Assembly produced 337 bytes; listing file shows clean label resolution.",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-04-23T17:00:32"
+}

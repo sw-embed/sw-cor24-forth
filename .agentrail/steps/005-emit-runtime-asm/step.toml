@@ -1,11 +1,12 @@
 number = 5
 slug = "emit-runtime-asm"
-status = "in-progress"
+status = "completed"
 description = """
 Extend COMPILE-RUNTIME in forth-from-forth/compiler/xcomp.fth so
 it emits the..."""
 role = "production"
 context_files = []
 created_at = "2026-04-23T16:54:46"
+completed_at = "2026-04-23T17:00:32"
 task_type = "feature"
-commits = []
+commits = ["76990ac3cb966820b19e37c7a9618dd0f14791d0"]

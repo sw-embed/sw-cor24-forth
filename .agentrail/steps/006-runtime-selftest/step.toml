@@ -1,0 +1,11 @@
+number = 6
+slug = "runtime-selftest"
+status = "pending"
+description = """
+Build a runnable self-test for the emitted runtime.fth dict. The
+step-005 out..."""
+role = "production"
+context_files = []
+created_at = "2026-04-23T17:02:26"
+task_type = "feature"
+commits = []

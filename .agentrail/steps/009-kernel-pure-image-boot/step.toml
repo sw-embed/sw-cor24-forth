@@ -1,9 +1,9 @@
-number = 7
-slug = "compiler-full-core"
+number = 9
+slug = "kernel-pure-image-boot"
 status = "pending"
 description = """
-Extend the cross-compiler to digest all five core tiers:
-runtime, minimal, lo..."""
+Switch `forth-from-forth/kernel.s` to boot ENTIRELY from the
+pre-compiled ima..."""
 role = "production"
 context_files = []
 created_at = "2026-04-22T19:33:55"
