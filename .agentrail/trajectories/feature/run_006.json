@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 7,
+    "step": "complete-runtime-emit"
+  },
+  "action": "Added 14 new STR: constants (8 primitives + 6 Forth labels). Wrote 3 new EMIT-* helpers following the existing pattern. Handled ['] at cross-compile time by inlining the LIT+cfa pattern in EMIT-SEMI. Discovered and fixed reg-rs rebase lag: must re-run immediately before rebase so latest stored output matches current. Synced new baseline to repo.",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-04-23T17:28:46"
+}
