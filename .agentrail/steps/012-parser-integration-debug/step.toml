@@ -1,0 +1,12 @@
+number = 12
+slug = "parser-integration-debug"
+status = "pending"
+description = """
+Resume the parser-integration debug from step 009.
+
+Step 009 left xcomp.fth w..."""
+role = "production"
+context_files = []
+created_at = "2026-04-25T10:34:42"
+task_type = "feature"
+commits = []
