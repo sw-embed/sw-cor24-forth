@@ -1,6 +1,6 @@
 number = 10
 slug = "cherry-pick-noname"
-status = "in-progress"
+status = "completed"
 description = """
 Cherry-pick `:NONAME` into the layered kernels.
 
@@ -8,5 +8,6 @@ Forth.s gained `:NONAME` in ..."""
 role = "production"
 context_files = []
 created_at = "2026-04-25T10:34:42"
+completed_at = "2026-04-25T12:07:51"
 task_type = "feature"
-commits = []
+commits = ["51825b414bdf45a113918aa544c024daaff7371a"]

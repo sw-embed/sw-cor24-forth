@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 10,
+    "step": "cherry-pick-noname"
+  },
+  "action": "Direct port from the forth.s asm primitive: HERE @ ,DOCOL ] does in 3 Forth words what the asm version did in ~25 lines, because the layered kernels already expose HERE / ,DOCOL / ] as primitives. No new ; variant needed: forth-in-forth's asm ; doesn't touch LATEST/HIDDEN, and forth-on-forthish/forth-from-forth's Forth ; only no-op-clears HIDDEN on the previous (already-unhidden) entry. Re-baselined two fib tests for the harmless ok-line drift.",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-04-25T12:07:51"
+}

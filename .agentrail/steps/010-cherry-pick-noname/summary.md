@@ -1,0 +1,1 @@
+Cherry-picked :NONAME into all three layered kernels as a 1-line Forth def: ':NONAME  HERE @ ,DOCOL ] ;'. Added to forth-in-forth/core/minimal.fth (no runtime.fth here), forth-on-forthish/core/runtime.fth, forth-from-forth/core/runtime.fth. Verified in each kernel with the tf24a_noname-equivalent scenarios. All 68 tf24a tests pass.
