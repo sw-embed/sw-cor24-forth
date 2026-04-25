@@ -167,22 +167,42 @@
 
 \ ---- SEE-CFA: decompile the body of a colon def given its CFA. ----
 \ Skips the 6-byte far-CFA template, then walks cells, printing each
-\ recognised CFA's name and unrecognised cells (LIT operands and
-\ BRANCH offsets) as decimal numbers. Stops on EXIT and prints `;`.
+\ recognised CFA's name and unrecognised cells (numeric literals,
+\ BRANCH/0BRANCH offsets) as decimal numbers. Stops on a real
+\ EXIT instruction and prints `;`.
+\
+\ Critical: when the current cell is LIT/BRANCH/0BRANCH, the NEXT
+\ cell is data (a literal value or branch offset), not code. We
+\ must print that following cell without re-checking it for EXIT,
+\ otherwise `['] EXIT` (which compiles to `LIT <cfa-of-EXIT>`) is
+\ misread as a real EXIT and truncates the decompile mid-body.
+\ Issue #4.
+
+\ Print one cell either as a known dict-entry name or as decimal.
+: SEE-CELL ( cell -- )
+  DUP >NAME DUP 0= IF
+    DROP DROP .
+  ELSE
+    >R >R DROP R> R>
+    PRINT-NAME
+  THEN ;
+
 : SEE-CFA ( cfa -- )
   6 +
   BEGIN
     DUP @
     DUP ['] EXIT = IF DROP DROP 59 EMIT 10 EMIT EXIT THEN
-    DUP >NAME
-    DUP 0= IF
-      DROP DROP
-      .
+    DUP ['] LIT =
+    OVER ['] BRANCH = OR
+    OVER ['] 0BRANCH = OR
+    IF
+      \ Data-following opcode. Print the opcode itself, advance,
+      \ print the operand cell as data (no EXIT check on it).
+      SEE-CELL
+      3 +
+      DUP @ SEE-CELL
     ELSE
-      >R >R
-      DROP
-      R> R>
-      PRINT-NAME
+      SEE-CELL
     THEN
     3 +
     0

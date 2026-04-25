@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 9,
+    "step": "parser-source-drive"
+  },
+  "action": "Built and tested incrementally on the phase-3 REPL using the cor24-run emulator. Found and fixed a bug in NUM-C, where /MOD's quot was being treated as the digit (missing SWAP after /MOD). Verified MAKE-*-LABEL output via XC-TEST-LABELS embedded in build output. Removed XC-TEST-LABELS hook before commit since it polluted the kernel dict and broke selftest. Step 010 picks up the integration debug.",
+  "result": "failure: integration-deferred",
+  "reward": 0,
+  "timestamp": "2026-04-25T08:50:49"
+}
