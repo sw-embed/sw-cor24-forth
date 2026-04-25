@@ -1477,10 +1477,47 @@ do_semi:
     jmp (r0)
 
 ; ------------------------------------------------------------
+; :NONAME ( -- xt ) : Start anonymous colon definition
+; Pushes the xt (CFA address) of the new def, writes the 6-byte
+; far-DOCOL CFA template at HERE (advancing HERE by 6), enters
+; compile mode. NO dictionary header is created — the xt is the
+; only handle. Standard `;` finalizes (compiles EXIT, STATE=0)
+; with the xt left on the data stack for the caller to EXECUTE
+; or store.
+;
+; Standard Forth-2012 semantic: ( -- xt colon-sys ); we put xt
+; directly on the data stack since this kernel doesn't track a
+; separate compile stack.
+; ------------------------------------------------------------
+entry_noname:
+    .word entry_semi
+    .byte 7
+    .byte 58, 78, 79, 78, 65, 77, 69    ; ":NONAME"
+do_noname:
+    add r1, -3
+    sw r2, 0(r1)        ; save IP
+
+    ; Push HERE (the future CFA addr) as the xt.
+    la r0, var_here_val
+    lw r0, 0(r0)
+    push r0
+
+    ; Set IP to a thread that writes the CFA template + ] + EXIT.
+    la r2, noname_thread
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+noname_thread:
+    .word do_colon_cfa   ; write 6-byte far CFA at HERE (advances HERE)
+    .word do_rbrac       ; STATE = 1 (compile mode)
+    .word do_exit        ; pop saved IP, return to caller
+
+; ------------------------------------------------------------
 ; IMMEDIATE ( -- ) : Toggle IMMEDIATE flag on most recent word
 ; ------------------------------------------------------------
 entry_immediate:
-    .word entry_semi
+    .word entry_noname
     .byte 9
     .byte 73, 77, 77, 69, 68, 73, 65, 84, 69
 do_immediate:

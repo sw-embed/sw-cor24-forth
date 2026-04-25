@@ -1,0 +1,9 @@
+command = """
+cor24-run --run forth.s -u ':NONAME 65 EMIT 10 EMIT ; EXECUTE
+:NONAME 49 50 51 EMIT EMIT EMIT 10 EMIT ; EXECUTE
+:NONAME 5 0 < IF 78 ELSE 80 THEN EMIT 10 EMIT ; DUP EXECUTE EXECUTE
+' --speed 0 -n 100000000 2>&1"""
+timeout = 30
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = ":NONAME anonymous colon def — basic execute, multiple defs, reuse via DUP"
