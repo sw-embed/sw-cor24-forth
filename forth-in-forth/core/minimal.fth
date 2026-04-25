@@ -10,6 +10,10 @@
 : =      XOR 0= ;
 : (      BEGIN KEY 41 = UNTIL ; IMMEDIATE
 : \      BEGIN KEY DUP 10 = SWAP 13 = OR UNTIL EOL! ; IMMEDIATE
+\ :NONAME ( -- xt ) — start anonymous colon def. Pushes future
+\ CFA addr (xt), writes far-DOCOL prelude, enters compile mode.
+\ Standard `;` finalizes. See GH #5.
+: :NONAME  HERE @ ,DOCOL ] ;
 \ Comments and logic work from here on. minimal.fth provides bootstrap:
 \ BEGIN/UNTIL/IF/THEN/ELSE (IMMEDIATE control flow built on 0BRANCH/BRANCH
 \ plus [']), 0= and = (logic built on XOR + IF/ELSE), and \ ( comment

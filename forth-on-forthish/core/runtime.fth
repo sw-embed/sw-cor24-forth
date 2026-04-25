@@ -11,3 +11,7 @@
 : -       NEGATE + ;
 : : CREATE ,DOCOL LATEST @ 3 + DUP C@ 64 OR SWAP C! ] ;
 : ; ['] EXIT , LATEST @ 3 + DUP C@ 191 AND SWAP C! 0 STATE ! ; IMMEDIATE
+\ :NONAME ( -- xt ) — anonymous colon def; xt is the future CFA.
+\ Standard `;` finalizes. The HIDDEN-clear in `;` no-ops on the
+\ previous (already-unhidden) LATEST entry. See GH #5.
+: :NONAME  HERE @ ,DOCOL ] ;
