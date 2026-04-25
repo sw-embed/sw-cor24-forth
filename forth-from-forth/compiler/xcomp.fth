@@ -435,6 +435,61 @@ STR: name-dup       3 C,  68 C, 85 C, 80 C,
 ;
 
 \ ============================================================
+\ Dynamic label construction (step 009)
+\ ============================================================
+\ NUM-C, ( n -- )  — write n's decimal digits as bytes at HERE.
+\ Mirrors phase-3 `.` but C,'s instead of EMITs.
+\ Handles n=0 specially; otherwise: /MOD loop pushes digit-chars
+\ (LSD-first) onto DS while counting on RS, then pops count from
+\ RS and C,'s digit-chars in LIFO order (MSD-first).
+: NUM-C,
+  DUP 0= IF DROP 48 C, EXIT THEN
+  0 >R
+  BEGIN
+    10 /MOD              \ ( rem quot )
+    SWAP 48 + SWAP       \ ( digit-char quot )
+    R> 1 + >R            \ increment digit count on RS
+    DUP 0=
+  UNTIL
+  DROP                   \ drop final 0 quot
+  R>                     \ digit count from RS
+  0 DO C, LOOP
+;
+
+\ Counter for monotonic label names (fff_c_1, fff_c_2, ...).
+VARIABLE xc-counter
+0 xc-counter !
+
+\ MAKE-CFA-LABEL ( n -- counted-addr )
+\ Build "fff_c_<n>" as a counted string at HERE; return start addr.
+: MAKE-CFA-LABEL
+  HERE @ >R                  \ save start addr
+  0 C,                       \ placeholder length byte
+  102 C, 102 C, 102 C,       \ "fff"
+  95  C,                     \ "_"
+  99  C,                     \ "c"
+  95  C,                     \ "_"
+  NUM-C,                     \ decimal digits of n
+  HERE @ R@ - 1 -            \ length = HERE - start - 1 (excludes length byte)
+  R@ C!                      \ patch length byte
+  R>                         \ return start
+;
+
+\ MAKE-ENTRY-LABEL ( n -- counted-addr ) — "fff_e_<n>"
+: MAKE-ENTRY-LABEL
+  HERE @ >R
+  0 C,
+  102 C, 102 C, 102 C,       \ "fff"
+  95  C,                     \ "_"
+  101 C,                     \ "e"
+  95  C,                     \ "_"
+  NUM-C,
+  HERE @ R@ - 1 -
+  R@ C!
+  R>
+;
+
+\ ============================================================
 \ Token-emit dispatch
 \ ============================================================
 \ ?DUP ( x -- x x | 0 ) — dup if non-zero. Not in phase-3 Forth.
@@ -741,14 +796,137 @@ STR: name-dup       3 C,  68 C, 85 C, 80 C,
 \ Top-level driver
 \ ============================================================
 
+\ ============================================================
+\ Source-driven compilation (step 009)
+\ ============================================================
+\ Track the LAST emitted entry label so the next entry's link
+\ field can point at it. 0 = no previous entry.
+VARIABLE xc-prev-entry
+0 xc-prev-entry !
+
+\ Track a permanent copy of the current name being compiled so
+\ XC-REGISTER can hand it to the symbol table. WORD returns
+\ a pointer into the WORD-BUFFER which gets overwritten on the
+\ next WORD call — we need to duplicate the bytes to HERE-area
+\ storage before the next read.
+\ XC-COPY-COUNTED ( counted-src -- counted-dst )
+\ Copy a counted string from src to HERE, return the new addr.
+: XC-COPY-COUNTED
+  HERE @ >R                \ save dst start
+  DUP C@                   \ src len
+  DUP C, SWAP              \ store length, stack: (len src)
+  1 + SWAP                 \ stack: (src-bytes len)
+  0 DO
+    DUP C@ C, 1 +
+  LOOP
+  DROP
+  R>
+;
+
+\ XC-COMPILE-NAME-BYTES ( counted -- )
+\ Emit `.byte <len>` then `.byte <c>` per char of counted string.
+: XC-COMPILE-NAME-BYTES
+  DUP C@                   \ len
+  DUP EMIT-BYTE-LITERAL    \ emit length
+  SWAP 1 + SWAP            \ (start-bytes len)
+  0 DO
+    DUP C@ EMIT-BYTE-LITERAL
+    1 +
+  LOOP
+  DROP
+;
+
+\ XC-READ-TOKEN ( -- counted-addr )  read next non-empty token.
+\ Skips EOL-induced empty WORD returns; returns when WORD gives
+\ a counted string with length > 0.
+: XC-READ-TOKEN
+  BEGIN
+    WORD                   \ counted (phase-3 WORD)
+    DUP C@                 \ counted len
+    0= IF DROP 0 ELSE -1 THEN
+  UNTIL
+;
+
+\ XC-IS-SEMI? ( counted-addr -- flag )
+\ Is this token exactly the single character `;` ?
+: XC-IS-SEMI?
+  DUP C@ 1 = IF
+    1 + C@ 59 =
+  ELSE
+    DROP 0
+  THEN
+;
+
+\ XC-COMPILE-BODY ( -- )  loop reading tokens, emit each via
+\ XC-EMIT-TOKEN, stop at `;` (emit do_exit).
+: XC-COMPILE-BODY
+  BEGIN
+    XC-READ-TOKEN
+    DUP XC-IS-SEMI? IF
+      DROP
+      label-exit EMIT-WORD-LABEL
+      EXIT
+    THEN
+    XC-EMIT-TOKEN
+  AGAIN
+;
+
+\ XC-COMPILE-ENTRY ( -- )  read name, emit dict header + DOCOL
+\ prelude, register in symbol table, compile body.
+\ NOTE (step 009 stop): integration of XC-READ-TOKEN +
+\ XC-COMPILE-BODY + IF/ELSE/UNTIL inside this def hits a
+\ phase-3 corner case that returns 0 instead of the counted
+\ string addr. Pieces tested individually all work:
+\   - NUM-C, emits decimal digits to HERE.
+\   - MAKE-CFA-LABEL / MAKE-ENTRY-LABEL build "fff_c_<N>" /
+\     "fff_e_<N>" counted strings (verified via XC-TEST-LABELS
+\     embedded in build-kernel.sh output).
+\   - XC-COPY-COUNTED dups WORD's transient buffer to HERE.
+\   - XC-COMPILE-NAME-BYTES emits ".byte" header bytes.
+\   - XC-READ-TOKEN, XC-IS-SEMI? work in isolation.
+\ Step 010 picks up the integration debug.
+: XC-COMPILE-ENTRY
+  XC-READ-TOKEN
+  XC-COPY-COUNTED
+  xc-counter @ 1 + xc-counter !
+  xc-counter @ MAKE-ENTRY-LABEL
+  DUP EMIT-LABEL-DEF
+  xc-prev-entry @ ?DUP IF
+    EMIT-WORD-LABEL
+  ELSE
+    0 EMIT-WORD-LITERAL
+  THEN
+  xc-prev-entry !
+  DUP XC-COMPILE-NAME-BYTES
+  xc-counter @ MAKE-CFA-LABEL
+  DUP EMIT-LABEL-DEF
+  EMIT-FAR-DOCOL
+  XC-REGISTER
+  XC-COMPILE-BODY
+;
+
+\ Step 009 test: emit a label for counters 1, 2, 17 as a smoke
+\ check. Kept for now to spot-check MAKE-*-LABEL output.
+: XC-TEST-LABELS
+  1 MAKE-CFA-LABEL EMIT-WORD-LABEL
+  2 MAKE-ENTRY-LABEL EMIT-WORD-LABEL
+  17 MAKE-CFA-LABEL EMIT-WORD-LABEL
+;
+
+\ XC-COMPILE-TEST ( -- )
+\ Step 009 top-level test. Initialize symbol table, wrap output
+\ in BEGIN/END markers, then read one `: NAME body ;` sequence
+\ from the UART stream and cross-compile it via XC-COMPILE-ENTRY.
+\ Used by a dedicated test script that feeds a synthetic def.
+: XC-COMPILE-TEST
+  XC-INIT-SYMBOLS
+  NL marker-begin EMIT-COUNTED NL
+  XC-READ-TOKEN DROP          \ consume `:`, ignore it
+  XC-COMPILE-ENTRY
+  marker-end EMIT-COUNTED NL
+;
+
 : COMPILE-RUNTIME
-  \ Step 008 laid down the symbol-table infrastructure
-  \ (XC-REGISTER / XC-FIND / XC-INIT-SYMBOLS) but the XC-FIND
-  \ walking loop needs further debugging — ran into instruction-
-  \ budget timeouts during validation. Left in place for step
-  \ 009 to continue. COMPILE-RUNTIME still uses the hardcoded
-  \ EMIT-<NAME> helpers from steps 005/007 — they work and keep
-  \ the 67-test reg-rs suite green.
   NL
   marker-begin EMIT-COUNTED NL
   EMIT-DUP

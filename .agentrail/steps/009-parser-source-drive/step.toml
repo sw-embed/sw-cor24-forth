@@ -1,0 +1,11 @@
+number = 9
+slug = "parser-source-drive"
+status = "in-progress"
+description = """
+Wire step 008's parser infrastructure into source-driven
+compilation. Replace..."""
+role = "production"
+context_files = []
+created_at = "2026-04-24T14:02:34"
+task_type = "feature"
+commits = []

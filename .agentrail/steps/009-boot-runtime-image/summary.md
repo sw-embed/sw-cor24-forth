@@ -1,1 +1,0 @@
-BLOCKED: Obsolete Python-blob prompt. Replacing with: build minimal parser in Forth (symbol table + WORD-dispatch + number-literal handling) — enough to re-emit runtime.fth's straight-line defs. Control-flow (IF/THEN/BEGIN) and [']/IMMEDIATE handling are step 009+.
