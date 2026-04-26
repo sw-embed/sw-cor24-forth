@@ -1,6 +1,6 @@
 number = 12
 slug = "parser-integration-debug"
-status = "pending"
+status = "in-progress"
 description = """
 Resume the parser-integration debug from step 009.
 
