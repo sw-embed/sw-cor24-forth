@@ -1,11 +1,12 @@
 number = 13
 slug = "recurse-and-roll"
-status = "in-progress"
+status = "completed"
 description = """
 Add RECURSE and ROLL to the layered kernels — productive GH #3
 progress whi..."""
 role = "production"
 context_files = []
 created_at = "2026-04-26T08:00:51"
+completed_at = "2026-04-26T08:41:47"
 task_type = "feature"
-commits = []
+commits = ["52e8236521dde6366b738cc46b19efade57b1692"]

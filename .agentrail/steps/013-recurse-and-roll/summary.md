@@ -1,0 +1,1 @@
+RECURSE + ROLL added to all 3 layered kernels via one-line Forth defs in lowlevel.fth. RECURSE is IMMEDIATE and compiles the in-progress def's CFA via LATEST + namelen + 4. ROLL uses RECURSE for the standard recursive impl. Verified with countdown + 0/1/2/4 ROLL tests. 70 tests pass. Updated GH #3 progress comment.

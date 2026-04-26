@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 13,
+    "step": "recurse-and-roll"
+  },
+  "action": "Wrote one-line defs in lowlevel.fth (3 kernels), tested via cor24-run with COUNT-DOWN and ROLL scenarios. Discovered initial COUNT-DOWN test had stack-balance bug (extra DROP after RECURSE underflows). Fixed test. Verified RECURSE works despite Forth :'s HIDDEN-bit since RECURSE uses LATEST @ rather than FIND. Re-baselined fof/fff fib for ok-line drift; created tf24a_fof_recurse_roll.",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-04-26T08:41:47"
+}
