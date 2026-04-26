@@ -1,1 +1,0 @@
-BLOCKED: Old Python-blob prompt. Replacing with: wire parser infrastructure (step 008) into actual source-driven compilation — XC-COMPILE-ENTRY / XC-COMPILE-BODY that read runtime.fth via WORD and emit dict via the symbol table. Dynamic label construction via monotonic counter.

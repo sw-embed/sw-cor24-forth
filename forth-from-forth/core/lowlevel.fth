@@ -20,6 +20,14 @@
 : MIN     OVER OVER < IF DROP ELSE NIP THEN ;
 : MAX     OVER OVER < IF NIP ELSE DROP THEN ;
 
+\ RECURSE ( -- )  IMMEDIATE — at compile time, compile the CFA of
+\ the in-progress colon-def. CFA = LATEST + 4 + namelen.
+: RECURSE  LATEST @ DUP 3 + C@ 63 AND + 4 + , ; IMMEDIATE
+
+\ ROLL ( xu xu-1 ... x0 u -- xu-1 ... x0 xu )  rotate u+1 items.
+\ 0 ROLL is no-op; 1 ROLL = SWAP; 2 ROLL = ROT.
+: ROLL    ?DUP IF SWAP >R 1 - RECURSE R> SWAP THEN ;
+
 \ ---- Double-cell stack helpers ----
 : 2DUP  OVER OVER ;
 : 2DROP DROP DROP ;

@@ -1,0 +1,13 @@
+command = """
+INPUT="$(cat forth-on-forthish/core/runtime.fth forth-on-forthish/core/minimal.fth forth-on-forthish/core/lowlevel.fth forth-on-forthish/core/midlevel.fth forth-on-forthish/core/highlevel.fth)
+: COUNT-DOWN ?DUP IF DUP . 1 - RECURSE THEN ;
+3 COUNT-DOWN 10 EMIT
+1 2 3 0 ROLL . . . 10 EMIT
+1 2 3 1 ROLL . . . 10 EMIT
+1 2 3 2 ROLL . . . 10 EMIT
+1 2 3 4 5 4 ROLL . . . . . 10 EMIT
+"; cor24-run --run forth-on-forthish/kernel.s -u "$INPUT" --speed 0 -n 1500000000 2>&1"""
+timeout = 30
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "RECURSE + ROLL — recursive countdown and 0/1/2/4 ROLL on stacks"

@@ -1,0 +1,1 @@
+BLOCKED: Old Python-blob-era prompt. Pivoting: parser-integration-debug deferred (notes in forth-from-forth/docs/parser-debug-notes.md). Inserting next: RECURSE + ROLL — productive GH #3 progress that's decoupled from the parser bug.

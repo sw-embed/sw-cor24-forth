@@ -236,5 +236,3 @@ fff_cfa_SEMI:
 .word do_lit
 .word 0
 .word do_state
-.word do_store
-.word do_exit
