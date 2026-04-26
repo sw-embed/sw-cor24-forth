@@ -1,11 +1,12 @@
 number = 14
 slug = "add-j"
-status = "in-progress"
+status = "completed"
 description = """
 Add J (outer-loop index for nested DO) — easy GH #3 win as a
 1-line Forth d..."""
 role = "production"
 context_files = []
 created_at = "2026-04-26T09:02:18"
+completed_at = "2026-04-26T12:20:22"
 task_type = "feature"
-commits = []
+commits = ["d6f66b795dc92a486133bf90e74e87873573db91"]
