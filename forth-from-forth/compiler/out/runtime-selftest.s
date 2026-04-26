@@ -638,11 +638,6 @@ fff_cfa_SEMI:
 .word do_lit
 .word 191
 .word fff_cfa_AND
-.word fff_cfa_SWAP
-.word do_cstore
-.word do_lit
-.word 0
-.word do_state
 
 ; === end of emitted dict ===
 dict_end:

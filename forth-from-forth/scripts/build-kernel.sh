@@ -41,7 +41,7 @@ INPUT="$(
 COMPILE-RUNTIME
 "
 
-cor24-run --run "$FOF/kernel.s" -u "$INPUT" --speed 0 -n 800000000 2>&1 \
+cor24-run --run "$FOF/kernel.s" -u "$INPUT" --speed 0 -t 60 -n 800000000 2>&1 \
   | grep -A 1000 '^UART output:' \
   | sed -n '/^!!BEGIN-KERNEL!!$/,/^!!END-KERNEL!!$/p' \
   | sed '1d;$d' \

@@ -1,0 +1,1 @@
+BLOCKED: Old Python-era prompt. Pivoting to GH #3 J primitive (easy Forth def) + investigation of remaining +LOOP/LEAVE/DOES>.

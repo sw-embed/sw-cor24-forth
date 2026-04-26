@@ -2456,10 +2456,27 @@ do_unloop:
     jmp (r0)
 
 ; ------------------------------------------------------------
+; RP@ ( -- addr ) : Push current return stack pointer (r1).
+; Used by Forth-level J ( outer-loop index ) to skip past
+; the Forth def's own caller IP and the inner loop's
+; index/limit on RS. Same impl as forth-on-forthish.
+; ------------------------------------------------------------
+entry_rp_fetch:
+    .word entry_unloop
+    .byte 3
+    .byte 82, 80, 64        ; "RP@"
+do_rp_fetch:
+    push r1
+    ; NEXT
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; ------------------------------------------------------------
 ; BYE ( -- ) : Halt the CPU
 ; ------------------------------------------------------------
 entry_bye:
-    .word entry_unloop
+    .word entry_rp_fetch
     .byte 3
     .byte 66, 89, 69        ; "BYE"
 do_bye:

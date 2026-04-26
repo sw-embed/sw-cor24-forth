@@ -28,6 +28,11 @@
 \ 0 ROLL is no-op; 1 ROLL = SWAP; 2 ROLL = ROT.
 : ROLL    ?DUP IF SWAP >R 1 - RECURSE R> SWAP THEN ;
 
+\ J ( -- index ) — outer loop index when called from within
+\ a nested DO body. Reads RS at offset 9 (skipping J's own
+\ caller IP + inner loop's index/limit).
+: J        RP@ 9 + @ ;
+
 \ ---- Double-cell stack helpers ----
 : 2DUP  OVER OVER ;
 : 2DROP DROP DROP ;

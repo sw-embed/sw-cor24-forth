@@ -1,0 +1,9 @@
+command = """
+INPUT="$(cat forth-on-forthish/core/runtime.fth forth-on-forthish/core/minimal.fth forth-on-forthish/core/lowlevel.fth forth-on-forthish/core/midlevel.fth forth-on-forthish/core/highlevel.fth)
+: NESTED 3 0 DO 2 0 DO I . J . 32 EMIT LOOP LOOP 10 EMIT ;
+NESTED
+"; cor24-run --run forth-on-forthish/kernel.s -u "$INPUT" --speed 0 -n 1500000000 2>&1"""
+timeout = 30
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "J — outer-loop index in nested DO"
