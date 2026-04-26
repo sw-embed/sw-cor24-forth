@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 12,
+    "step": "parser-integration-debug"
+  },
+  "action": "Reproduced bug via XC-COMPILE-TEST. Tried direct XC-COMPILE-ENTRY invocation. Tried 2-level wrapper test (INNER/OUTER) which worked, ruling out simple deep WORD invocation. Tried inline test of WORD : DROP WORD 65 EMIT pattern. Observed DIFFERENT failure modes between direct and chained invocation. Restored xcomp.fth to committed state. Wrote parser-debug-notes.md with findings + hypotheses for next session: WORD-BUFFER ownership, HIDDEN-bit interaction, RS depth, audit XC-COMPILE-BODY for loop-sentinel bug, -1 literal compilation. Suggested using cor24-run --dump for next-session diagnosis since UART-only debug is hitting limits.",
+  "result": "failure: diagnosis-incomplete",
+  "reward": 0,
+  "timestamp": "2026-04-26T07:48:06"
+}
