@@ -1,6 +1,6 @@
 number = 11
 slug = "more-forth-words"
-status = "pending"
+status = "in-progress"
 description = """
 Knock out the easy half of GH #3 (More Forth words).
 

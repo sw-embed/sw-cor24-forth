@@ -6,6 +6,18 @@
 : TUCK  SWAP OVER ;
 : ROT   >R SWAP R> SWAP ;
 : -ROT  ROT ROT ;
+\ PICK ( xn..x0 n -- xn..x0 xn ). 0 PICK = DUP; 1 PICK = OVER.
+\ Computes (n+1)*3 as n+1 + n+1 + n+1 to avoid the Forth-level `*`.
+: PICK  1 + DUP DUP + + SP@ + @ ;
+
+\ ---- GH #3: comparison and stack words built on < ----
+: ?DUP    DUP IF DUP THEN ;
+: >       SWAP < ;
+: <=      1 + < ;
+: >=      1 - > ;
+: <>      = 0= ;
+: MIN     OVER OVER < IF DROP ELSE NIP THEN ;
+: MAX     OVER OVER < IF NIP ELSE DROP THEN ;
 
 \ ---- Double-cell stack helpers ----
 : 2DUP  OVER OVER ;

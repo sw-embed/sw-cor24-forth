@@ -1,0 +1,14 @@
+command = """
+INPUT="$(cat forth-on-forthish/core/runtime.fth forth-on-forthish/core/minimal.fth forth-on-forthish/core/lowlevel.fth forth-on-forthish/core/midlevel.fth forth-on-forthish/core/highlevel.fth)
+3 5 < . 5 3 > .
+5 5 <= . 5 4 <= .
+5 5 >= . 4 5 >= .
+3 3 <> . 3 5 <> .
+3 5 MIN . 3 5 MAX .
+0 ?DUP DEPTH . DROP
+5 ?DUP DEPTH . DROP DROP
+"; cor24-run --run forth-on-forthish/kernel.s -u "$INPUT" --speed 0 -n 800000000 2>&1"""
+timeout = 30
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "GH #3: ?DUP > <= >= <> MIN MAX in forth-on-forthish"

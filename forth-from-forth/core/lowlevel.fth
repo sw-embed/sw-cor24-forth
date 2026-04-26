@@ -11,6 +11,15 @@
 \ `*` (which is itself a loop).
 : PICK  1 + DUP DUP + + SP@ + @ ;
 
+\ ---- GH #3: comparison and stack words built on < ----
+: ?DUP    DUP IF DUP THEN ;
+: >       SWAP < ;
+: <=      1 + < ;
+: >=      1 - > ;
+: <>      = 0= ;
+: MIN     OVER OVER < IF DROP ELSE NIP THEN ;
+: MAX     OVER OVER < IF NIP ELSE DROP THEN ;
+
 \ ---- Double-cell stack helpers ----
 : 2DUP  OVER OVER ;
 : 2DROP DROP DROP ;
