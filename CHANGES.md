@@ -1,5 +1,32 @@
 # Changelog
 
+## Fix: `13-loop-switch-led.fth` data-stack leak + switch-toggle regression tests (2026-10-20)
+
+### Fixed
+
+- `examples/13-loop-switch-led.fth`: `DELAY`, `PAUSE` and `MIRROR` were
+  written as `100 0 BEGIN 1 + DUP 100 = UNTIL DROP`, which leaves the
+  limit literal behind on every call — two cells leaked per MIRROR
+  iteration. With a 3 KB data stack the SP crossed below the EBR base
+  after ~500 iterations (10–20 M instructions, a few seconds in the web
+  debugger), the emulator's bounds check halted the CPU, and D2 froze —
+  reported as "toggling S2 does nothing" on every web tab. The loops now
+  count up from 0 with only the counter on the stack. Forth source only;
+  no kernel or assembly change, so the FPGA build is unaffected.
+
+### Added
+
+- `reg-rs/tf24a_loop_switch_led_follow` — runs the demo under
+  `cor24-emu --switch-at 6000000:on,8000000:off,10000000:on` and keeps
+  only the `[S2 @ N]` / `[LED @ N]` lines: D2 must follow every toggle.
+- `reg-rs/tf24a_loop_switch_led_no_leak` — runs MIRROR to completion
+  then `DEPTH .`; expects `0` and no stack-overflow report (~8 s).
+- Both need `cor24-asm` and `cor24-emu` (sw-cor24-x-assembler,
+  sw-cor24-emulator with `--switch-at`) on PATH. The rest of the suite
+  still calls `cor24-run --run`, which the current emulator no longer
+  builds; those tests need the same `cor24-asm … && cor24-emu --lgo …`
+  form before they can run against current tooling.
+
 ## Feature: DO/LOOP family + defining words + Forth `:`/`;` (2026-04-20)
 
 ### Added — both kernels (`forth-in-forth` and `forth-on-forthish`)

@@ -1,0 +1,7 @@
+command = '''cor24-asm forth.s -o /tmp/tf24a-forth.lgo && cor24-emu --lgo /tmp/tf24a-forth.lgo -u "$(cat examples/13-loop-switch-led.fth)
+DEPTH .
+" --speed 0 -n 600000000 2>&1'''
+timeout = 120
+preprocess = "grep -E -A 100 '^UART output:|^Stack (over|under)flow' || true"
+exit_code = 0
+desc = "13-loop-switch-led: MIRROR runs to completion with a balanced data stack (DEPTH 0, no overflow)"
