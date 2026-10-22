@@ -1,0 +1,11 @@
+{
+  "task_type": "bugfix",
+  "state": {
+    "number": 23,
+    "step": "023-depth-uses-sp-base"
+  },
+  "action": "three-site patch in forth-core.s, regenerated forth.s, full suites",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-10-22T13:35:45"
+}

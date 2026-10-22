@@ -1,9 +1,10 @@
 number = 23
 slug = "023-depth-uses-sp-base"
-status = "in-progress"
+status = "completed"
 description = "DEPTH and .S hard-coded the stand-alone data-stack base 0xFEEC00 instead of v..."
 role = "production"
 context_files = []
 created_at = "2026-10-22T13:35:45"
+completed_at = "2026-10-22T13:35:45"
 task_type = "bugfix"
-commits = []
+commits = ["7b6d044c78ecf79f79d3a7146ea0d443c66edc96"]
