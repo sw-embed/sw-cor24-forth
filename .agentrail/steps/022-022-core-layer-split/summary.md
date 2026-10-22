@@ -1,0 +1,1 @@
+forth.s split into forth-core.s + forth-uart.s with scripts/build-forth.sh regenerating the checked-in forth.s; 73/73 reg-rs and 47/47 demo.sh pass; layout unchanged.

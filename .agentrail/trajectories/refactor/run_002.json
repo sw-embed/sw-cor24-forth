@@ -1,0 +1,11 @@
+{
+  "task_type": "refactor",
+  "state": {
+    "number": 22,
+    "step": "022-core-layer-split"
+  },
+  "action": "asserted-regex migration script (scratchpad) rewrote every UART site to io_emit/io_key return-stack calls; new layer file; generator with --check; docs and changelog",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-10-22T08:28:38"
+}
