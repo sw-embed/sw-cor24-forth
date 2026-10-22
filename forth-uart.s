@@ -64,6 +64,10 @@ io_key_poll:
 io_bye:
     bra io_bye
 
+; This layer adds no words: the dictionary ends where the core's does.
+layer_latest:
+        .word   entry_ver
+
 ; io_branch : body of BRANCH. r2 = IP at the offset cell.
 io_branch:
     lw r0, 0(r2)        ; r0 = signed offset

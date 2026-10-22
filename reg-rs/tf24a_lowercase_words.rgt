@@ -1,0 +1,5 @@
+command = '''scripts/run-kernel.sh forth.s -u 'words\n1 2 swap . .\ndepth .\n' --speed 0 -n 5000000 2>&1'''
+timeout = 30
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "FIND folds case: lower-case words find upper-case dictionary entries"

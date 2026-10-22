@@ -65,7 +65,8 @@ core_start:
     sw r0, 0(r2)
 
     ; Initialize system variables (r0, r2 free before Phase 1)
-    la r2, entry_ver
+    la r2, layer_latest
+    lw r2, 0(r2)        ; the layer names the last entry: entry_ver, or words of its own chained onto it
     la r0, var_latest_val
     sw r2, 0(r0)        ; LATEST = last dictionary entry
     la r2, dict_start
@@ -986,6 +987,18 @@ find_cmp_loop:
     ; Load search char
     lw r0, 0(r1)        ; sname_ptr (RS offset 0)
     lbu r0, 0(r0)       ; r0 = search char
+    ; Fold a-z to A-Z: the dictionary is upper case and the typist need
+    ; not be. r2 (entry char) is parked on the data stack meanwhile.
+    push r2
+    lcu r2, 97           ; 'a'
+    clu r0, r2           ; C = (char < 'a')
+    brt find_no_fold
+    lcu r2, 123          ; 'z' + 1
+    clu r0, r2           ; C = (char <= 'z')
+    brf find_no_fold
+    add r0, -32
+find_no_fold:
+    pop r2
 
     ceq r0, r2
     brf find_char_fail
@@ -2994,6 +3007,9 @@ test_thread:
 ;   io_branch    body of BRANCH: r2 = IP at the offset cell; take it, NEXT
 ;   io_zbranch   body of 0BRANCH: flag on the data stack, r2 as above
 ;   dict_start   label: first byte of the dictionary growth area
+;   layer_latest a .word naming the last dictionary entry: entry_ver, or the
+;                last of the layer's own words, each linked onto the chain
+;                that ends at entry_ver
 ; io_emit and io_key are called with the return address on top of the return
 ; stack (r1) and must preserve r2; they may use r0, fp, and the data stack.
 ; They return with  lw r0, 0(r1) / add r1, 3 / jmp (r0).
@@ -3062,6 +3078,10 @@ io_key_poll:
 ; io_bye : halt the CPU.
 io_bye:
     bra io_bye
+
+; This layer adds no words: the dictionary ends where the core's does.
+layer_latest:
+        .word   entry_ver
 
 ; io_branch : body of BRANCH. r2 = IP at the offset cell.
 io_branch:

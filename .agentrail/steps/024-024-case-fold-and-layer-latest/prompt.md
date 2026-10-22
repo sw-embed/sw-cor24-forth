@@ -1,0 +1,1 @@
+FIND folds a-z to A-Z so a typist need not shout; core_start reads the last dictionary entry from the layer's layer_latest word so a host layer can add words of its own onto the chain. Gate: reg-rs incl. new tf24a_lowercase_words, demo.sh test.
