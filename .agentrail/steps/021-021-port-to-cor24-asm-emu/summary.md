@@ -1,0 +1,1 @@
+Ported every script and all 73 reg-rs tests from the deprecated combined cor24-run to scripts/run-kernel.sh (cor24-asm + cor24-emu); 73/73 reg-rs and 47/47 demo.sh checks pass; docs and changelog updated.

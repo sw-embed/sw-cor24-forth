@@ -1,0 +1,11 @@
+{
+  "task_type": "refactor",
+  "state": {
+    "number": 21,
+    "step": "021-port-to-cor24-asm-emu"
+  },
+  "action": "grep inventory of cor24-run call sites; new scripts/run-kernel.sh with tool resolution and private temp dir; sed/python rewrites of .rgt commands, scripts, and living docs; reg-rs run with REG_RS_DATA_DIR in-repo; one test given --stack-bounds none, one rebased; sed-rs replaced by sed",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-10-22T08:09:56"
+}

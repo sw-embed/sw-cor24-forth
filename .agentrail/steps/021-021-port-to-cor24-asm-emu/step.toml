@@ -1,9 +1,10 @@
 number = 21
 slug = "021-port-to-cor24-asm-emu"
-status = "in-progress"
+status = "completed"
 description = "Finish the move off the deprecated combined cor24-run tool. The assembler (sw..."
 role = "production"
 context_files = []
 created_at = "2026-10-22T08:01:05"
+completed_at = "2026-10-22T08:09:56"
 task_type = "refactor"
-commits = []
+commits = ["de3222eb7f9a5211dae9a09fc10dc33cd1fd23b1"]
