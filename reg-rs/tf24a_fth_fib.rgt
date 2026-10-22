@@ -1,5 +1,5 @@
 command = """
-cor24-run --run forth.s -u "$(cat examples/14-fib.fth)
+scripts/run-kernel.sh forth.s -u "$(cat examples/14-fib.fth)
 " --speed 0 -n 40000000 2>&1"""
 timeout = 60
 preprocess = "grep -A 100 '^UART output:' || true"

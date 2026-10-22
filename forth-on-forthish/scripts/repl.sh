@@ -11,4 +11,4 @@ for tier in runtime minimal lowlevel midlevel highlevel; do
   [ -f "$f" ] && CORE_FILES+=("$f")
 done
 ( cat "${CORE_FILES[@]}"; cat ) \
-  | cor24-run --run "$FOF/kernel.s" --terminal --echo --speed 0
+  | "$FOF/../scripts/run-kernel.sh" "$FOF/kernel.s" --terminal --echo --speed 0

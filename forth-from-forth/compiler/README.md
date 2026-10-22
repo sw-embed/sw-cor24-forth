@@ -10,7 +10,7 @@ scripts/build-kernel.sh      # regenerate forth-from-forth/kernel.s
 
 The script cats `compiler/xcomp.fth`, `core/prims.fth`, the five
 `core/*.fth` tiers, and a trailing `COMPILE-KERNEL` invocation
-into `cor24-run --run forth-on-forthish/kernel.s --terminal`. The
+into `scripts/run-kernel.sh forth-on-forthish/kernel.s --terminal`. The
 phase-3 Forth REPL reads xcomp.fth (which defines the alternate
 compilation vocabulary), then walks the prims + core sources
 through that vocabulary, EMITting COR24 assembler text to UART.

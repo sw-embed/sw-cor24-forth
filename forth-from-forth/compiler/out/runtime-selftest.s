@@ -4,7 +4,7 @@
 ; test-kernel.sh concatenates this file with
 ; compiler/out/runtime-dict.s (emitted by build-kernel.sh in step
 ; 005) to produce compiler/out/runtime-selftest.s — a complete
-; runnable .s that cor24-run can assemble and execute.
+; runnable .s that cor24-asm assembles and cor24-emu executes.
 ;
 ; Provides:
 ;   - _start: init RSP + DSP, enter test_thread

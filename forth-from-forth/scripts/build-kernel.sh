@@ -2,7 +2,7 @@
 # build-kernel.sh — run the forth-from-forth cross-compiler.
 #
 # Pipes xcomp.fth + "COMPILE-RUNTIME" into the phase-3
-# forth-on-forthish REPL via cor24-run's -u (UART input) flag.
+# forth-on-forthish REPL via cor24-emu's -u (UART input) flag.
 # Captures UART output, strips everything outside the
 # !!BEGIN-KERNEL!! / !!END-KERNEL!! markers, strips the REPL's
 # per-line " ok" chrome from the captured payload, and writes
@@ -41,7 +41,7 @@ INPUT="$(
 COMPILE-RUNTIME
 "
 
-cor24-run --run "$FOF/kernel.s" -u "$INPUT" --speed 0 -t 60 -n 800000000 2>&1 \
+"$FOF/../scripts/run-kernel.sh" "$FOF/kernel.s" -u "$INPUT" --speed 0 -t 60 -n 800000000 2>&1 \
   | grep -A 1000 '^UART output:' \
   | sed -n '/^!!BEGIN-KERNEL!!$/,/^!!END-KERNEL!!$/p' \
   | sed '1d;$d' \

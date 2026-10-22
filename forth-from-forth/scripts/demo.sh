@@ -5,7 +5,7 @@
 # Default example: examples/14-fib.fth (the compatibility baseline).
 #
 # RESTRICTION: source files passed via this script must not contain the
-# literal text \n, \r, \t, or \xNN — cor24-run's --uart-input interprets
+# literal text \n, \r, \t, or \xNN — cor24-emu's --uart-input interprets
 # these as escape sequences before the kernel sees the bytes (see
 # reg-rs/tf24a_no_bad_escapes.rgt).
 set -euo pipefail
@@ -21,5 +21,5 @@ for tier in runtime minimal lowlevel midlevel highlevel; do
 done
 INPUT="$(cat "${CORE_FILES[@]}" "$EXAMPLE" 2>/dev/null)
 "
-cor24-run --run "$FOF/kernel.s" -u "$INPUT" --speed 0 -n 800000000 2>&1 \
+"$FOF/../scripts/run-kernel.sh" "$FOF/kernel.s" -u "$INPUT" --speed 0 -n 800000000 2>&1 \
   | grep "^UART output:" -A 250 || true

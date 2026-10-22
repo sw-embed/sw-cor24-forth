@@ -16,13 +16,13 @@ artifact — not a hand-edited file.
 The cross-compiler targets **COR24 assembler text** (the same
 syntax `forth-on-forthish/kernel.s` uses today: `.byte`, `.word`,
 labels, opcodes). We are **not** emitting machine code. The cor24
-assembler (`cor24-run --assemble` or `--run`) turns that text into
+assembler (`cor24-asm`, run for us by `scripts/run-kernel.sh`) turns that text into
 bytes, same as before.
 
 No Python, no C, no Rust. The toolchain is:
 
 - `forth-on-forthish/kernel.s` — phase-3 Forth REPL, unchanged
-- `cor24-run` — COR24 assembler and emulator
+- `cor24-asm` and `cor24-emu` — COR24 assembler and emulator, joined by `scripts/run-kernel.sh`
 - Shell (`cat`, pipes, redirection) — stitch inputs and capture UART
 - The cross-compiler itself — a `.fth` source file loaded into the
   phase-3 REPL
@@ -33,7 +33,7 @@ No Python, no C, no Rust. The toolchain is:
    cross-compiler.fth  +  core/*.fth  +  a "compile all" command
              │
              ▼
-   cor24-run --run forth-on-forthish/kernel.s --terminal
+   scripts/run-kernel.sh forth-on-forthish/kernel.s --terminal
              │ (phase-3 Forth loads the compiler and the core, runs COMPILE-KERNEL)
              │
              ▼
@@ -54,7 +54,7 @@ redirection:
   cat forth-from-forth/compiler/xcomp.fth
   cat forth-on-forthish/core/*.fth
   echo 'COMPILE-KERNEL'
-} | cor24-run --run forth-on-forthish/kernel.s --terminal \
+} | scripts/run-kernel.sh forth-on-forthish/kernel.s --terminal \
   | sed -n '/^!!BEGIN-KERNEL!!$/,/^!!END-KERNEL!!$/p' \
   | sed '1d;$d' \
   > forth-from-forth/kernel.s
@@ -455,7 +455,7 @@ tests. Subset 008-rebaseline-reg-rs handles that drift.
 
 4. **Testing the emitted kernel.** `reg-rs/tf24a_fff_fib`
    exercises it end-to-end. The test command runs `scripts/
-   build-kernel.sh` then `cor24-run --run forth-from-forth/
+   build-kernel.sh` then `scripts/run-kernel.sh forth-from-forth/
    kernel.s -u '<fib input>'`. Baseline captures fib output.
 
 5. **Primitives still needed.** We keep all ~35 asm primitives

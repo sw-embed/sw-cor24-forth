@@ -1,4 +1,4 @@
-command = '''cor24-asm forth.s -o /tmp/tf24a-forth.lgo && cor24-emu --lgo /tmp/tf24a-forth.lgo -u "$(cat examples/13-loop-switch-led.fth)
+command = '''scripts/run-kernel.sh forth.s -u "$(cat examples/13-loop-switch-led.fth)
 DEPTH .
 " --speed 0 -n 600000000 2>&1'''
 timeout = 120

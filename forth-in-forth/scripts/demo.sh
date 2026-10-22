@@ -5,7 +5,7 @@
 # Default example: examples/14-fib.fth (the compatibility baseline).
 #
 # RESTRICTION: source files passed via this script must not contain
-# the literal text \n, \r, \t, or \xNN — cor24-run's --uart-input
+# the literal text \n, \r, \t, or \xNN — cor24-emu's --uart-input
 # interprets these as escape sequences before the kernel sees the
 # bytes, which can prematurely terminate Forth `\` line comments.
 # (See forth-in-forth/docs/design.md.)
@@ -22,5 +22,5 @@ for tier in minimal lowlevel midlevel highlevel; do
 done
 INPUT="$(cat "${CORE_FILES[@]}" "$EXAMPLE" 2>/dev/null)
 "
-cor24-run --run "$FIF/kernel.s" -u "$INPUT" --speed 0 -n 400000000 2>&1 \
+"$FIF/../scripts/run-kernel.sh" "$FIF/kernel.s" -u "$INPUT" --speed 0 -n 400000000 2>&1 \
   | grep "^UART output:" -A 200 || true

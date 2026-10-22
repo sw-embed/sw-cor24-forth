@@ -25,7 +25,7 @@ forth-on-forthish/
 
 ## Bootstrap flow
 
-1. `cor24-run --run kernel.s -u <input>` starts at `_start`.
+1. `scripts/run-kernel.sh kernel.s -u <input>` assembles the kernel and starts at `_start`.
 2. `_start` initializes the threading registers, sets `LATEST` to the
    last asm dict entry (likely BYE), initializes `HERE`, snapshots
    `sp_base`, and enters the asm `QUIT-BOOT` (a tiny outer loop that

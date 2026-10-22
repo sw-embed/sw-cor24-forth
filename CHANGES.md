@@ -1,5 +1,33 @@
 # Changelog
 
+## Tooling: finish the move off the combined `cor24-run` (2026-10-22)
+
+### Changed
+
+- The assembler (`cor24-asm`, sw-cor24-x-assembler) and the emulator
+  (`cor24-emu`, sw-cor24-emulator) have been separate programs for a while,
+  but 70 of the 73 reg-rs tests, `demo.sh`, `demos/*.sh`, `scripts/build.sh`
+  and every `forth-*/scripts/*.sh` still invoked the deprecated combined
+  `cor24-run --run`, so none of them could run. New `scripts/run-kernel.sh`
+  assembles a kernel to a private temporary `.lgo` and runs `cor24-emu` on it
+  with the caller's options, finding the tools on `PATH`, via
+  `COR24_ASM`/`COR24_EMU`, in the sibling checkouts, or in
+  `../sw-tos/tools/bin`. Every script and test command now goes through it.
+- `reg-rs/` is the test data directory: run the suite from the repository
+  root with `REG_RS_DATA_DIR=$PWD/reg-rs reg-rs run -p tf24a --parallel`.
+- `tf24a_underflow_drop` passes `--stack-bounds none`: the current emulator
+  halts on its own SP bounds check before Forth's QUIT-level underflow check
+  can report, and that Forth check is what the test exists to prove.
+- `tf24a_fff_selftest` rebased: the old emulator's trailing
+  `CPU halted (self-branch detected)` line is not printed by `cor24-emu`.
+- `demo.sh test` uses POSIX `sed` instead of the `sed-rs` binary, which was
+  one more tool the suite could not find, and its expected `WORDS` listing
+  now includes `:NONAME` (added to the kernel in step 010 after the
+  expectation was last updated). 47 of 47 checks pass.
+- Living docs (`CLAUDE.md`, `README.md`, the `forth-*/docs/architecture.md`
+  files, the compiler README and design) teach the new form. Dated notes
+  under `docs/` are history and keep the commands they were written with.
+
 ## Fix: `13-loop-switch-led.fth` data-stack leak + switch-toggle regression tests (2026-10-20)
 
 ### Fixed

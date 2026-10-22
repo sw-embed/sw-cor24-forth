@@ -36,7 +36,7 @@ forth-from-forth/
     README.md           usage + design cross-reference.
   scripts/
     build-kernel.sh     Regenerate kernel.s: cat xcomp.fth +
-                        core/*.fth + compile-cmd | cor24-run
+                        core/*.fth + compile-cmd | run-kernel.sh
                         --run forth-on-forthish/kernel.s
                         --terminal | strip-markers > kernel.s.
     demo.sh             Run an example against the generated
@@ -50,7 +50,7 @@ forth-from-forth/
 
 ## Bootstrap flow — the emitted kernel
 
-`cor24-run --run kernel.s -u <input>` starts at `_start` in the
+`scripts/run-kernel.sh kernel.s -u <input>` starts at `_start` in the
 generated `kernel.s`:
 
 1. Load RSP (`la r1, 983040`), snapshot initial `sp` into
@@ -68,7 +68,7 @@ No UART read on boot. No asm INTERPRET. No hash-table populate.
    `core/prims.fth`, `core/runtime.fth`, `core/minimal.fth`,
    `core/lowlevel.fth`, `core/midlevel.fth`, `core/highlevel.fth`,
    plus a trailing `COMPILE-KERNEL` invocation.
-2. Pipes into `cor24-run --run forth-on-forthish/kernel.s
+2. Pipes into `scripts/run-kernel.sh forth-on-forthish/kernel.s
    --terminal`. The phase-3 Forth REPL interprets the input:
    - `xcomp.fth` defines the compilation vocabulary (PRIM:,
      COLON:, etc.) in the phase-3 dict.

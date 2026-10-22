@@ -12,8 +12,11 @@ as part of the COR24 ecosystem consolidation under the `sw-embed` organization.
 
 ## Prerequisites
 
-- `cor24-run` — build from [sw-cor24-emulator](https://github.com/sw-embed/sw-cor24-emulator)
-- `sed-rs` — used by test scripts
+- `cor24-asm` — build from [sw-cor24-x-assembler](https://github.com/sw-embed/sw-cor24-x-assembler)
+- `cor24-emu` — build from [sw-cor24-emulator](https://github.com/sw-embed/sw-cor24-emulator)
+- `scripts/run-kernel.sh` finds both on `PATH` or in the sibling checkouts and
+  runs any kernel: `scripts/run-kernel.sh forth.s -u '2 3 + .\n' --speed 0 -n 5000000`
+- `sed` — used by `demo.sh test` (any POSIX sed)
 
 ## Quick Start
 

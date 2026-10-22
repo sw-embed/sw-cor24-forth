@@ -20,4 +20,4 @@ for tier in minimal lowlevel midlevel highlevel; do
   [ -f "$f" ] && CORE_FILES+=("$f")
 done
 ( cat "${CORE_FILES[@]}"; cat ) \
-  | cor24-run --run "$FIF/kernel.s" --terminal --echo --speed 0
+  | "$FIF/../scripts/run-kernel.sh" "$FIF/kernel.s" --terminal --echo --speed 0

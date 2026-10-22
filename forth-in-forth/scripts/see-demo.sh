@@ -22,7 +22,7 @@ done
 MARKER='61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 10 EMIT'
 INPUT=$'\n'"$(cat "${CORE_FILES[@]}")"$'\n'"$MARKER"$'\n: SQUARE DUP * ;\n: CUBE DUP SQUARE * ;\nDUMP-ALL\n'
 
-cor24-run --run "$FIF/kernel.s" -u "$INPUT" --speed 0 -n 800000000 2>&1 \
+"$FIF/../scripts/run-kernel.sh" "$FIF/kernel.s" -u "$INPUT" --speed 0 -n 800000000 2>&1 \
   | grep "^UART output:" -A 1000 \
   | awk '/========/{flag=1; next} flag' \
   | sed '/^ ok$/d; /^$/d; /^Executed/q'

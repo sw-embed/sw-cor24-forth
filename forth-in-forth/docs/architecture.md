@@ -11,13 +11,13 @@ forth-in-forth/
     midlevel.fth        loaded 3rd: CR SPACE HEX DECIMAL `.`
     highlevel.fth       loaded 4th: DEPTH .S WORDS VER SEE
   demo.sh               runs kernel + tiered core + one example file
-  repl.sh               runs kernel + tiered core then hands off to cor24-run --terminal
+  repl.sh               runs kernel + tiered core then hands off to cor24-emu --terminal
   docs/                 this directory
 ```
 
 ## Bootstrap flow
 
-1. `cor24-run --run kernel.s -u <input>` starts the CPU at `_start`.
+1. `scripts/run-kernel.sh kernel.s -u <input>` assembles the kernel and starts the CPU at `_start`.
 2. `_start` sets `LATEST` to the kernel's top entry, snapshots `sp_base`,
    initializes `HERE`, then enters `QUIT` via the threaded `test_thread`.
 3. `QUIT` reads lines over UART. For each line, `INTERPRET` runs

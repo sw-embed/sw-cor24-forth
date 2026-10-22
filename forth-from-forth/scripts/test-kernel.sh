@@ -7,7 +7,7 @@
 #      xcomp.fth.
 #   2. Concatenate selftest-scaffold.s + runtime-dict.s into
 #      compiler/out/runtime-selftest.s.
-#   3. Assemble with cor24-run; run with no UART input.
+#   3. Assemble and run it (scripts/run-kernel.sh) with no UART input.
 #   4. Print the UART output (which is the test result).
 #
 # Expected successful output:
@@ -50,6 +50,6 @@ mkdir -p "$OUT_DIR"
 echo "test-kernel.sh: wrote $SELFTEST_S ($(wc -l < "$SELFTEST_S") lines)" >&2
 
 # Step 3: run the self-test, capture UART output
-cor24-run --run "$SELFTEST_S" --speed 0 -t 60 -n 200000000 2>&1 \
+"$(dirname "$0")/../../scripts/run-kernel.sh" "$SELFTEST_S" --speed 0 -t 60 -n 200000000 2>&1 \
   | grep -A 100 '^UART output:' \
   | sed -n '/^UART output:/,$p'

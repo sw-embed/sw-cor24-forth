@@ -10,10 +10,16 @@ Part of the [COR24 ecosystem](https://github.com/sw-embed/sw-cor24-project).
 Clean-room DTC Forth for the COR24 24-bit RISC ISA. Assembler kernel, self-extending in Forth.
 
 ### Tools
-- `cor24-run --run file.s [opts]` — assemble and run COR24 assembly
-- `cor24-run --run file.s --dump --speed 0 -n N` — run N instructions, dump state
-- `cor24-run --run file.s --terminal --echo --speed 0` — interactive UART session
-- `cor24-run --run file.s -u 'input' --speed 0 --dump` — feed UART input, dump state
+The assembler (`cor24-asm`, from sw-cor24-x-assembler) and the emulator
+(`cor24-emu`, from sw-cor24-emulator) are separate programs; the old combined
+`cor24-run` is gone. `scripts/run-kernel.sh` joins them: it assembles a kernel
+to a private temporary `.lgo` and runs it with whatever emulator options follow.
+- `scripts/run-kernel.sh file.s [opts]` — assemble and run COR24 assembly
+- `scripts/run-kernel.sh file.s --dump --speed 0 -n N` — run N instructions, dump state
+- `scripts/run-kernel.sh file.s --terminal --echo --speed 0` — interactive UART session
+- `scripts/run-kernel.sh file.s -u 'input' --speed 0 --dump` — feed UART input, dump state
+- Tools are found on `PATH`, else via `COR24_ASM` / `COR24_EMU`, else in the
+  sibling checkouts' `target/release`, else in `../sw-tos/tools/bin`.
 
 ### COR24 Assembly Syntax
 - Labels on own line: `label:` (no inline `label: instr`)
@@ -68,31 +74,35 @@ See `docs/inspect-stack-impl.md` for full ISA reference.
 
 **Every new word or feature MUST have a test before implementation.**
 
-1. Write the test first as a threaded-code sequence in the test_thread, or as a `cor24-run -u` command
+1. Write the test first as a threaded-code sequence in the test_thread, or as a `scripts/run-kernel.sh -u` command
 2. Verify the test fails or produces wrong output
 3. Implement the word
 4. Verify the test passes
 5. Run ALL previous tests to check for regressions
 
-Test format for `cor24-run -u`:
+Test format for `scripts/run-kernel.sh ... -u`:
 ```bash
 # Test: WORD ( inputs -- expected-outputs )
-cor24-run --run forth.s -u 'inputs\n' --speed 0 -n 5000000 2>&1 | grep "^UART output:"
+scripts/run-kernel.sh forth.s -u 'inputs\n' --speed 0 -n 5000000 2>&1 | grep "^UART output:"
 # Expected: ... expected output ...
 ```
 
 When adding threaded-code tests, add them to test_thread BEFORE the `do_quit` entry.
 
-**Run the full test suite with:** `reg-rs run -p tf24a --parallel`
+**Run the full test suite with:** `REG_RS_DATA_DIR=$PWD/reg-rs reg-rs run -p tf24a --parallel`
 
 Regression tests use `reg-rs` (golden-output regression tool). Each test captures
-the full cor24-run output and compares against baseline. Tests are in `~/.local/reg-rs/`.
+the emulator output, keeps everything from `UART output:` on, and compares
+against its baseline. The tests live in this repository under `reg-rs/` (`.rgt`
+spec and `.out` baseline per test; run results in gitignored `.tdb` files), so
+point `REG_RS_DATA_DIR` there. Run from the repository root: commands name
+`scripts/run-kernel.sh` and the kernels relative to it.
 
 To add a new test:
 ```bash
 PP="grep -A 100 '^UART output:' || true"
 reg-rs create -t tf24a_TESTNAME -P "$PP" --timeout 30 \
-  -c "cor24-run --run forth.s -u 'INPUT\n' --speed 0 -n 5000000 2>&1" \
+  -c "scripts/run-kernel.sh forth.s -u 'INPUT\n' --speed 0 -n 5000000 2>&1" \
   --desc "description"
 ```
 
@@ -101,7 +111,7 @@ Legacy bash tests: `./demo.sh test`
 **Stack leak tests are mandatory.** Every new word must be tested for stack balance:
 ```bash
 # Before and after calling NEWWORD, DEPTH must not change
-cor24-run --run forth.s -u 'DEPTH .\nNEWWORD\nDEPTH .\n' --speed 0 -n 10000000
+scripts/run-kernel.sh forth.s -u 'DEPTH .\nNEWWORD\nDEPTH .\n' --speed 0 -n 10000000
 ```
 
 **Common COR24 stack bugs:**

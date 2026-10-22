@@ -1,4 +1,4 @@
-command = '''cor24-asm forth.s -o /tmp/tf24a-forth.lgo && cor24-emu --lgo /tmp/tf24a-forth.lgo -u "$(cat examples/13-loop-switch-led.fth)
+command = '''scripts/run-kernel.sh forth.s -u "$(cat examples/13-loop-switch-led.fth)
 " --switch-at 6000000:on,8000000:off,10000000:on --speed 0 -n 12000000 2>&1'''
 timeout = 60
 preprocess = "grep -E '^\\[(S2|LED) @|^Stack (over|under)flow' || true"

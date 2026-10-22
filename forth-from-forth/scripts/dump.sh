@@ -13,7 +13,7 @@ done
 MARKER='61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 10 EMIT'
 INPUT=$'\n'"$(cat "${CORE_FILES[@]}")"$'\n'"$MARKER"$'\nDUMP-ALL\n'
 
-cor24-run --run "$FOF/kernel.s" -u "$INPUT" --speed 0 -n 3000000000 2>&1 \
+"$FOF/../scripts/run-kernel.sh" "$FOF/kernel.s" -u "$INPUT" --speed 0 -n 3000000000 2>&1 \
   | grep "^UART output:" -A 1000 \
   | awk '/========/{flag=1; next} flag' \
   | sed '/^Executed/q'
