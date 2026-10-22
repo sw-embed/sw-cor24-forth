@@ -1,0 +1,1 @@
+Split forth.s into forth-core.s (target-independent) and forth-uart.s (stand-alone hardware layer) joined by scripts/build-forth.sh, so a host such as sw-tos can supply its own I/O, return-stack, dictionary, BYE and branch layer. forth.s stays checked in and generated. Gate: 73/73 reg-rs and 47/47 demo.sh test, and the stand-alone memory layout unchanged.

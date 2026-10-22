@@ -21,6 +21,13 @@ to a private temporary `.lgo` and runs it with whatever emulator options follow.
 - Tools are found on `PATH`, else via `COR24_ASM` / `COR24_EMU`, else in the
   sibling checkouts' `target/release`, else in `../sw-tos/tools/bin`.
 
+### Source layout
+- `forth-core.s` is the kernel; `forth-uart.s` is the hardware layer; `forth.s`
+  is GENERATED from the two by `scripts/build-forth.sh` and checked in. Edit the
+  core or the layer, rerun the script, and commit all three. The layer contract
+  (`layer_init`, `io_emit`, `io_key`, `io_bye`, `io_branch`, `io_zbranch`,
+  `dict_start`) is documented at the end of `forth-core.s`.
+
 ### COR24 Assembly Syntax
 - Labels on own line: `label:` (no inline `label: instr`)
 - Comments: `;` only (not `#`)

@@ -1,0 +1,9 @@
+number = 22
+slug = "022-core-layer-split"
+status = "in-progress"
+description = "Split forth.s into forth-core.s (target-independent) and forth-uart.s (stand-..."
+role = "production"
+context_files = []
+created_at = "2026-10-22T08:28:37"
+task_type = "refactor"
+commits = []

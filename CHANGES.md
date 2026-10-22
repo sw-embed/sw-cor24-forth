@@ -1,5 +1,30 @@
 # Changelog
 
+## Refactor: split forth.s into a target-independent core and a hardware layer (2026-10-22)
+
+### Changed
+
+- `forth-core.s` holds everything that does not touch hardware; `forth-uart.s`
+  is the stand-alone board layer (UART polling, return stack at 0x0F0000,
+  open-ended dictionary, halting `BYE`, plain branches). `forth.s` is now
+  generated from the two by `scripts/build-forth.sh` and stays checked in,
+  since the web demo compiles it in by path; `--check` reports staleness.
+- The 29 inline UART sites in the kernel became calls to two layer routines,
+  `io_emit ( c -- )` and `io_key ( -- c )`, made through the return stack so
+  no link register is needed and r1 (RSP) is never disturbed. `BYE`, `BRANCH`
+  and `0BRANCH` defer to `io_bye`, `io_branch`, `io_zbranch`, giving a host
+  layer a place to end a session and to yield or notice a stop request on
+  loop branches. The return-stack base is read from `var_rstack_top`, which
+  `layer_init` sets; `HERE` starts at the layer's `dict_start`.
+- Behavior is unchanged: 73 of 73 reg-rs tests and 47 of 47 `demo.sh test`
+  checks pass against the regenerated kernel. Memory layout on the stand-alone
+  build is unchanged too (same return-stack base, dictionary still grows from
+  the end of the image), so the web debugger's stack views still apply. The
+  image is 91 bytes larger (4010 vs 3919).
+- The sw-tos layer, which routes I/O through SWTOS kernel services, lives in
+  the sw-tos repository as `hal/cor24/forth-swtos.s` against a vendored copy
+  of the core.
+
 ## Tooling: finish the move off the combined `cor24-run` (2026-10-22)
 
 ### Changed

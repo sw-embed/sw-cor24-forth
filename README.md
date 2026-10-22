@@ -36,7 +36,14 @@ scripts/build.sh
 
 ## Architecture
 
-- **forth.s** — 2600+ line COR24 assembly implementing a complete DTC Forth
+- **forth-core.s** — the target-independent DTC Forth: dictionary, inner and
+  outer interpreter, every primitive. It never touches hardware.
+- **forth-uart.s** — the stand-alone layer: UART I/O at 0xFF0100, return stack
+  at 0x0F0000, open-ended dictionary, halting `BYE`. Other hosts supply their
+  own layer (sw-tos routes I/O through its kernel services).
+- **forth.s** — generated: core + UART layer, by `scripts/build-forth.sh`.
+  Checked in because the web demo and the FPGA build consume it by path.
+  `scripts/build-forth.sh --check` fails when it is stale.
 - **Register allocation**: r0=W, r1=RSP, r2=IP, sp=DSP
 - **Cell size**: 3 bytes (24-bit words)
 - **I/O**: UART at address -65280 (0xFF0100)
