@@ -1,9 +1,10 @@
 number = 24
 slug = "024-case-fold-and-layer-latest"
-status = "in-progress"
+status = "completed"
 description = "FIND folds a-z to A-Z so a typist need not shout; core_start reads the last d..."
 role = "production"
 context_files = []
 created_at = "2026-10-22T16:41:44"
+completed_at = "2026-10-22T16:41:44"
 task_type = "feature"
-commits = []
+commits = ["2c32892b12f09d1aad7d271370a578e73b5349cf"]
