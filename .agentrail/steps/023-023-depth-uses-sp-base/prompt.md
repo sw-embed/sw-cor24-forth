@@ -1,0 +1,1 @@
+DEPTH and .S hard-coded the stand-alone data-stack base 0xFEEC00 instead of var_sp_base, which core_start snapshots; under a host whose process stack is elsewhere they loop forever. Use var_sp_base. Gate: 73/73 reg-rs, 47/47 demo.sh.

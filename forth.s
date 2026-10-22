@@ -2320,11 +2320,13 @@ do_depth:
     mov fp, sp
     push fp
     pop r0               ; r0 = current sp (push/pop cancel out)
-    ; r0 = sp after we pushed IP. Total bytes = init_sp - r0.
-    ; init_sp = 0xFEEC00 = 16706560
+    ; r0 = sp after we pushed IP. Total bytes = sp_base - r0, where sp_base is
+    ; the data-stack base core_start snapshotted (0xFEEC00 stand-alone; a
+    ; process stack under a host). Never a fixed address.
     add r1, -3
     sw r0, 0(r1)        ; save sp on RS. RS: [sp_val, IP]
-    la r0, 16706560
+    la r0, var_sp_base
+    lw r0, 0(r0)
     lw r2, 0(r1)        ; r2 = sp_val
     add r1, 3           ; pop. RS: [IP]
     sub r0, r2           ; r0 = total_bytes (including our saved IP)
@@ -2382,7 +2384,8 @@ do_dot_s:
     pop r0               ; r0 = current sp
     add r1, -3
     sw r0, 0(r1)        ; save sp_val. RS: [sp_val, IP]
-    la r0, 16706560      ; 0xFEEC00
+    la r0, var_sp_base
+    lw r0, 0(r0)         ; sp_base, snapshotted at core_start
     lw r2, 0(r1)
     add r1, 3
     sub r0, r2           ; r0 = total bytes
@@ -2450,22 +2453,18 @@ dots_gt_tx:
 dots_sp1_tx:
 
     ; Print each stack value bottom-to-top using do_dot via thread.
-    ; Bottom of stack is at 0xFEEC00 - 3 = 0xFEEBFD.
-    ; Top of stack is at sp (current).
-    ; Walk from (0xFEEC00 - 3) down to sp, printing each.
-    ; Actually: bottom is highest address, top is lowest.
-    ; Stack grows DOWN: sp starts at 0xFEEC00, first push goes to 0xFEEBFD.
-    ; So bottom-of-stack item is at 0xFEEBFD, and top is at sp.
-    ; Walk from 0xFEEBFD downward to sp.
-    ; Wait: walk from (init_sp - 3) DOWN to current_sp.
-    ; For each address, lw r0, 0(fp) where fp = address.
+    ; The stack grows down from sp_base (snapshotted at core_start), so the
+    ; bottom item is at sp_base - 3 and the top is at sp. Walk from the
+    ; bottom item down to sp, reading each through fp as the base register.
 
     lw r0, 0(r1)        ; depth
     ceq r0, z
     brt dots_done        ; empty stack
 
-    ; Start address: 0xFEEC00 - 3 = 0xFEEBFD = 16706557
-    la r0, 16706557      ; 0xFEEBFD — bottom of stack
+    ; Start address: sp_base - 3, the bottom item
+    la r0, var_sp_base
+    lw r0, 0(r0)
+    add r0, -3
     add r1, -3
     sw r0, 0(r1)        ; save walk_ptr. RS: [walk_ptr, depth, IP]
 
