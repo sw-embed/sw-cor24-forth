@@ -135,7 +135,7 @@ pres.addSection({ title: "Intro" });
   const s = content("What this deck covers", "Intro");
   const items = [
     ["1", "The target", "COR24 in one page, and what its ISA takes away from a Forth writer."],
-    ["2", "Three implementations", "forth.s, forth-in-forth and forth-on-forthish: what each keeps in assembly and why."],
+    ["2", "Three implementations", "forth.s, forth-in-forth and forth-on-forthish: what each keeps in assembly and why. Plus forth.s hosted inside SWTOS."],
     ["3", "Choices vs. other Forths", "Threading, cell size, HERE semantics, division, dictionary search."],
     ["4", "The demos", "What each dropdown entry teaches, which tabs run it, and the hardware demos."],
     ["5", "Working with words", "Define, run, list, inspect, redefine and forget, in the web UI and on the CLI."],
@@ -280,7 +280,7 @@ section("Three implementations", "in  ·  in-ish  ·  from: how much of the kern
 {
   const s = content("forth.s: the all-assembly kernel (tab 1)", "Implementations");
   bullets(s, 0.5, 1.0, 5.1, 4.1, [
-    "Generated: forth-core.s (target-independent DTC Forth) + forth-uart.s (UART at 0xFF0100, return stack at 0x0F0000, halting BYE). The layer contract lets sw-tos host the same core with its own I/O.",
+    "Generated: forth-core.s (target-independent DTC Forth) + forth-uart.s (UART at 0xFF0100, return stack at 0x0F0000, halting BYE). The layer contract is what lets SWTOS host the same core (next slide).",
     "Every word is assembly, including IF / THEN, ., WORDS, \\ and (. ~65 primitives, 3,879 bytes assembled.",
     "Richest vocabulary: FORGET, :NONAME, DO / ?DO / LOOP / I / UNLOOP, CONSTANT, VARIABLE, AGAIN / WHILE / REPEAT, DEPTH, .S.",
     "Fastest: the Fibonacci demo compiles and runs in about 40 M instructions.",
@@ -308,6 +308,28 @@ section("Three implementations", "in  ·  in-ish  ·  from: how much of the kern
     "  jmp (r0)",
   ], 9.5);
   s.addText("Note the saved IP: even a leaf primitive spills r2 because pop and la need a second register.", { x: 5.9, y: 4.5, w: 3.6, h: 0.6, fontSize: 10.5, italic: true, color: C.accent2, margin: 0, isTextBox: true, objectName: "led note" });
+}
+
+// ============================================================
+// 10b. forth.s inside SWTOS
+// ============================================================
+{
+  const s = content("The same core inside SWTOS: Forth as a pane", "Implementations");
+  // layer diagram, left
+  s.addText("One core, two layers", { x: 0.5, y: 1.0, w: 4.3, h: 0.3, fontSize: 12.5, bold: true, color: C.text1, margin: 0, isTextBox: true, objectName: "layer caption" });
+  flowBox(s, 0.5, 1.4, 4.3, 0.6, "forth-core.s   dictionary, inner + outer interpreter, every primitive; never touches hardware", C.text1, C.background1, 10);
+  arrow(s, 1.35, 2.08, 0.3, 0.3);
+  arrow(s, 3.35, 2.08, 0.3, 0.3);
+  flowBox(s, 0.5, 2.45, 2.05, 1.15, "forth-uart.s\nUART at 0xFF0100, return stack at 0x0F0000, BYE halts\n= forth.s, tab 1 and the board", C.accent2, C.background1, 9.5);
+  flowBox(s, 2.75, 2.45, 2.05, 1.15, "forth-swtos.s (sw-tos)\nI/O via kernel services into its own pane; 8 KB dictionary and 1 KB return stack in the module; BYE or Escape exits the process", C.accent1, C.background1, 9.5);
+  codeBox(s, 0.5, 3.8, 4.3, 1.25, ["; the contract, end of forth-core.s", "layer_init  io_emit  io_key  io_bye", "io_branch  io_zbranch  dict_start  layer_latest", "; sw-tos vendors the core with", "scripts/vendor-forth-core.sh --check"], 9.5);
+  bullets(s, 5.2, 1.0, 4.3, 4.1, [
+    "Live: swtos.softwarewrighter.com/forth/ boots SWTOS's forth profile in the browser. At the shell type bg forth; the REPL opens in its own pane.",
+    "Four layer words: MENU lists the 18 vendored examples, n LOAD runs one as if typed, n LIST prints it, RESET forgets everything. Words are case-insensitive.",
+    "It is a resident program like any other: its data stack is the process stack (256 cells), and a Forth loop that never yields (example 21, HOG) is preempted by the clock and can be killed from the shell. On the bare kernel that loop needs a reset.",
+    "Nothing in the core changed to make this work. The split into forth-core.s plus a layer was done so SWTOS could own I/O, stacks and exit while the Forth stays byte-identical.",
+    "Same source commit as tab 1, so the three web tabs and the SWTOS pane run the same Forth; only the host differs.",
+  ], 11);
 }
 
 // ============================================================
@@ -535,21 +557,21 @@ pres.addSection({ title: "Working with words" });
 {
   const s = pres.addSlide({ masterName: "DARK_TITLE", sectionTitle: "Working with words" });
   s.addText("Try it", { placeholder: "title" });
-  s.addText("sw-embed.github.io/web-sw-cor24-forth  ·  tab 3 boots by default; press ? for the guide, reference and tutorial", { placeholder: "body" });
-  s.addText("Repositories, all under github.com/sw-embed", { x: 0.6, y: 3.6, w: 8.8, h: 0.3, fontSize: 11, bold: true, color: C.accent5, margin: 0, isTextBox: true, objectName: "repos caption" });
+  s.addText("sw-embed.github.io/web-sw-cor24-forth (three kernels, press ? for the guide)  ·  swtos.softwarewrighter.com/forth/ (forth.s as an SWTOS pane: bg forth)", { placeholder: "body" });
+  s.addText("Repositories, all under github.com/sw-embed", { x: 0.6, y: 3.75, w: 8.8, h: 0.3, fontSize: 11, bold: true, color: C.accent5, margin: 0, isTextBox: true, objectName: "repos caption" });
   const links = [
     ["Web UI", "web-sw-cor24-forth"],
     ["Kernels and demos", "sw-cor24-forth"],
     ["Emulator and CLI", "sw-cor24-emulator"],
     ["Assembler", "sw-cor24-x-assembler"],
-    ["ISA crate", "sw-cor24-isa"],
+    ["SWTOS and its web demo", "sw-tos, web-sw-tos"],
     ["Board", "makerlisp.com"],
   ];
   links.forEach((l, i) => {
     const col = i % 2, row = Math.floor(i / 2);
-    const x = 0.6 + col * 4.5, y = 3.95 + row * 0.36;
-    s.addText(l[0], { x, y, w: 1.6, h: 0.32, fontSize: 11, bold: true, color: C.accent1, margin: 0, valign: "middle", isTextBox: true, objectName: name("link label") });
-    s.addText(l[1], { x: x + 1.65, y, w: 2.8, h: 0.32, fontSize: 11, fontFace: MONO, color: C.background1, margin: 0, valign: "middle", isTextBox: true, objectName: name("link url") });
+    const x = 0.6 + col * 4.5, y = 4.1 + row * 0.36;
+    s.addText(l[0], { x, y, w: 1.95, h: 0.32, fontSize: 11, bold: true, color: C.accent1, margin: 0, valign: "middle", isTextBox: true, objectName: name("link label") });
+    s.addText(l[1], { x: x + 2.0, y, w: 2.45, h: 0.32, fontSize: 11, fontFace: MONO, color: C.background1, margin: 0, valign: "middle", isTextBox: true, objectName: name("link url") });
   });
 }
 
