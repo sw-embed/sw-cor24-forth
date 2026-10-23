@@ -1,0 +1,9 @@
+number = 6
+slug = "web-tab-4"
+status = "pending"
+description = "Add the fourth tab, forth-from-forth, to ../web-sw-cor24-forth (work in that ..."
+role = "production"
+context_files = []
+created_at = "2026-10-23T10:19:52"
+task_type = "feature"
+commits = []

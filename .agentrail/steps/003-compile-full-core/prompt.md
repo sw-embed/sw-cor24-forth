@@ -1,0 +1,5 @@
+Extend the cross-compiler to all five core tiers: runtime, minimal, lowlevel, midlevel, highlevel.
+
+Needed in compiler/xcomp.fth: IMMEDIATE control-flow emitters that lay down BRANCH/0BRANCH with resolved offsets (IF THEN ELSE BEGIN UNTIL AGAIN WHILE REPEAT, DO ?DO LOOP via (DO)/(?DO)/(LOOP)); CONSTANT and VARIABLE defining words; ['] emitting LIT <cfa>; IMMEDIATE flag in the header byte; the HIDDEN/SMUDGE handling the Forth `:` and `;` rely on; the HERE/LATEST/STATE/BASE address convention; comment skipping for \ and ( in the source being compiled. Resolve forward references the way the blog's Part 5 argues (fixups), not with per-word special cases.
+
+Done when: (a) scripts/build-kernel.sh emits a dictionary covering every colon definition in the five tiers (count them: grep -c '^: ' forth-from-forth/core/*.fth) and the build reports the count; (b) a self-test image boots the emitted dict and runs examples/14-fib.fth producing `1 1 2 3 5 8 13 21 34 55 89`; (c) kernel-sizes.md gains a row with emitted line and byte counts; (d) reg-rs green.

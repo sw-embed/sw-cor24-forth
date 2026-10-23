@@ -1,0 +1,7 @@
+Make forth-from-forth/kernel.s a build artifact that boots from the compiled image, with no UART bootstrap.
+
+core/prims.fth declares every irreducible primitive (NEXT, DOCOL, EXIT, LIT, BRANCH, 0BRANCH, EXECUTE, @ ! C@ C!, + NAND, KEY EMIT LED! SW?, SP@ SP! RP@ RP!, HERE LATEST STATE BASE, ,DOCOL, (DO) (?DO) (LOOP) I UNLOOP, QUIT-VECTOR, BYE/HALT) as PRIM: blocks whose bodies are the asm text to emit. The emitted kernel.s = _start + primitives + the step-3 dictionary. _start sets LATEST, HERE and sp_base from compile-time labels and jumps straight to the Forth QUIT (or EXECUTEs the CFA that QUIT-VECTOR would have held). No do_interpret, do_word, do_find, do_number, test_thread or hash-populate loop is emitted.
+
+Hard requirement for the web tab: the KEY primitive's busy-wait label must be `key_poll` (16-byte window after the label), and any other UART busy-wait in the emitted asm must use a label from web-sw-cor24-forth/src/pump.rs POLL_LABELS. Add a note in prims.fth saying why.
+
+Done when: (a) `scripts/build-kernel.sh` regenerates kernel.s and `scripts/build-kernel.sh --check` fails when it is stale (mirror scripts/build-forth.sh); (b) `scripts/run-kernel.sh forth-from-forth/kernel.s -u "$(cat examples/14-fib.fth)"` prints the fib sequence with NO core files on the UART; (c) time-to-first-ok is measured (instructions) and recorded in kernel-sizes.md next to the forth-on-forthish figure; (d) reg-rs green.

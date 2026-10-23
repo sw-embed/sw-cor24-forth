@@ -1,0 +1,9 @@
+number = 7
+slug = "blog-brief"
+status = "pending"
+description = "Write the blog brief: docs/blog/2026-phase-4-forth-from-forth-brief.md in thi..."
+role = "production"
+context_files = []
+created_at = "2026-10-23T10:19:52"
+task_type = "feature"
+commits = []

@@ -1,0 +1,9 @@
+number = 2
+slug = "compile-runtime-from-source"
+status = "pending"
+description = "Drive core/runtime.fth through the source-driven parser instead of the hand-l..."
+role = "production"
+context_files = []
+created_at = "2026-10-23T10:19:52"
+task_type = "feature"
+commits = []

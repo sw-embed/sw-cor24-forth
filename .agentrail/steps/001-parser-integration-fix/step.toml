@@ -1,0 +1,9 @@
+number = 1
+slug = "parser-integration-fix"
+status = "pending"
+description = "Fix the forth-from-forth parser integration bug so source-driven compilation ..."
+role = "production"
+context_files = []
+created_at = "2026-10-23T10:19:52"
+task_type = "feature"
+commits = []

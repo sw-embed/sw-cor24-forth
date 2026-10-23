@@ -1,0 +1,9 @@
+number = 4
+slug = "prims-and-image-boot"
+status = "pending"
+description = "Make forth-from-forth/kernel.s a build artifact that boots from the compiled ..."
+role = "production"
+context_files = []
+created_at = "2026-10-23T10:19:52"
+task_type = "feature"
+commits = []

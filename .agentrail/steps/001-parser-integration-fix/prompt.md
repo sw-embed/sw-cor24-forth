@@ -1,0 +1,9 @@
+Fix the forth-from-forth parser integration bug so source-driven compilation works end to end.
+
+Read forth-from-forth/docs/parser-debug-notes.md first: it has the symptom, what is verified to work in isolation, and five hypotheses. Then reproduce: `XC-COMPILE-TEST : FOO SP@ @ ;` run through scripts/build-kernel.sh (or scripts/run-kernel.sh forth-on-forthish/kernel.s with xcomp.fth on the UART) prints `!!BEGIN-KERNEL!!` then `? ?  ok` and no dict bytes.
+
+Approach: instrument rather than guess. Use DEPTH and .S checkpoints (or EMIT markers) at each level of INTERPRET -> XC-COMPILE-TEST -> XC-COMPILE-ENTRY -> XC-READ-TOKEN -> WORD, and compare the return-stack depth (RP@) at entry and exit of each. Suspects named in the notes: WORD's end-of-line handling when called three levels deep (word_eol_flag / EOL-FLAG left set), `?` underflow markers from phase-3 INTERPRET re-entering with stack residue, and IF/ELSE/THEN inside BEGIN/UNTIL returning 0 instead of the counted-string address. The bug may be in the phase-3 kernel's Forth WORD or EOL-FLAG handling rather than in xcomp.fth; if so, fix it in forth-on-forthish/core/*.fth and note that both forth-on-forthish and forth-from-forth core files change.
+
+Done when: (a) XC-COMPILE-TEST on `: FOO SP@ @ ;` emits a complete fff_entry_FOO / fff_cfa_FOO block; (b) a reg-rs test `tf24a_fff_xc_compile_test` locks that output; (c) parser-debug-notes.md gets a "Resolution" section saying what the bug was; (d) forth-from-forth/docs/status.md is rewritten to reflect reality (steps done in the archived saga, this saga's step list) instead of saying "step 002 scaffold"; (e) the full tf24a reg-rs suite passes.
+
+Do not start the full-core compiler here. If the bug is not fixed by the end of the session, write the new findings into parser-debug-notes.md, commit, and `agentrail abort --reason` with the best hypothesis.
