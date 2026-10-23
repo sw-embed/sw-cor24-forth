@@ -1,0 +1,7 @@
+command = """
+scripts/run-kernel.sh forth.s -u "$(cat examples/16-while.fth)
+" --speed 0 -n 40000000 2>&1"""
+timeout = 60
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "examples/16-while.fth on the stand-alone kernel"

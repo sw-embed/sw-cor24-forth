@@ -1,0 +1,1 @@
+Port DO/LOOP/?DO/I/UNLOOP, AGAIN/WHILE/REPEAT, CONSTANT/VARIABLE from the layered kernels into the shared core, add TUCK NIP and FORGET, and example 20-redefine; reg-rs tests for examples 15-20.

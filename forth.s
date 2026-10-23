@@ -2927,6 +2927,387 @@ ver_word_cfa:
     .word do_cr
     .word do_exit
 
+
+; ============================================================
+; Counted loops, test-in-middle loops, CONSTANT and VARIABLE
+; ============================================================
+; Ported from the layered kernels so every build has them. The runtime
+; primitives (DO) (LOOP) (?DO) I UNLOOP are assembly; the compile-time words
+; and CONSTANT/VARIABLE are threaded colon definitions over existing
+; primitives, written as the layered core/*.fth defines them. Branch offsets
+; in those threads are relative to the offset cell, as BRANCH expects.
+
+; (DO) ( limit start -- )  ( R: -- limit index )
+entry_paren_do:
+    .word entry_ver
+    .byte 0x4           ; length=4
+    .byte 40, 68, 79, 41    ; "(DO)"
+do_paren_do:
+    pop r0                   ; r0 = start
+    add r1, -6               ; reserve limit+index on RS
+    sw r0, 0(r1)             ; index (=start)
+    pop r0                   ; r0 = limit
+    sw r0, 3(r1)             ; limit
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; (LOOP) -- thread: [do_paren_loop][offset]. Increment the index; at the
+; limit drop both and skip the offset, otherwise branch back by it.
+entry_paren_loop:
+    .word entry_paren_do
+    .byte 0x6           ; length=6
+    .byte 40, 76, 79, 79, 80, 41    ; "(LOOP)"
+do_paren_loop:
+    push r2
+    pop fp                   ; fp = saved IP, freeing r2 for the compare
+    lw r0, 0(r1)             ; r0 = index
+    add r0, 1
+    sw r0, 0(r1)
+    lw r2, 3(r1)             ; r2 = limit
+    ceq r0, r2
+    brt ploop_done
+    push fp
+    pop r2                   ; IP
+    lw r0, 0(r2)             ; back offset
+    add r2, r0
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+ploop_done:
+    push fp
+    pop r2
+    add r1, 6                ; drop limit+index
+    add r2, 3                ; skip offset cell
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; (?DO) ( limit start -- )  thread: [do_paren_qdo][fwd_offset]. Skip the
+; body when start equals limit, else push limit+index and fall through.
+entry_paren_qdo:
+    .word entry_paren_loop
+    .byte 0x5           ; length=5
+    .byte 40, 63, 68, 79, 41    ; "(?DO)"
+do_paren_qdo:
+    push r2
+    pop fp
+    pop r0                   ; start
+    pop r2                   ; limit
+    ceq r0, r2
+    brt qdo_skip
+    add r1, -3
+    sw r2, 0(r1)             ; limit
+    add r1, -3
+    sw r0, 0(r1)             ; index
+    push fp
+    pop r2
+    add r2, 3                ; skip fwd offset
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+qdo_skip:
+    push fp
+    pop r2
+    lw r0, 0(r2)
+    add r2, r0
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; I ( -- index ) : the current loop index, top of the return stack.
+entry_i:
+    .word entry_paren_qdo
+    .byte 0x1           ; length=1
+    .byte 73    ; "I"
+do_i:
+    lw r0, 0(r1)
+    push r0
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; UNLOOP ( -- ) ( R: limit index -- ) : drop the loop state before an EXIT
+; from inside a DO loop.
+entry_unloop:
+    .word entry_i
+    .byte 0x6           ; length=6
+    .byte 85, 78, 76, 79, 79, 80    ; "UNLOOP"
+do_unloop:
+    add r1, 6
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
+; DO ( -- body 0 ) [IMMEDIATE] : ['] (DO) , HERE @ 0
+entry_do:
+    .word entry_unloop
+    .byte 0x82           ; length=2 + IMMEDIATE
+    .byte 68, 79    ; "DO"
+do_do:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_lit, do_paren_do
+    .word do_comma
+    .word do_here
+    .word do_fetch
+    .word do_lit, 0
+    .word do_exit
+
+; ?DO ( -- body patch ) [IMMEDIATE] : ['] (?DO) , HERE @ 0 , HERE @ SWAP
+entry_qdo:
+    .word entry_do
+    .byte 0x83           ; length=3 + IMMEDIATE
+    .byte 63, 68, 79    ; "?DO"
+do_qdo:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_lit, do_paren_qdo
+    .word do_comma
+    .word do_here
+    .word do_fetch
+    .word do_lit, 0
+    .word do_comma
+    .word do_here
+    .word do_fetch
+    .word do_swap
+    .word do_exit
+
+; LOOP ( body patch -- ) [IMMEDIATE] :
+;   ['] (LOOP) , OVER HERE @ - , DUP IF HERE @ OVER - SWAP ! ELSE DROP THEN DROP
+; The branch offsets below count from their own cell: 0BRANCH at +30 goes
+; to the ELSE drop at +57, BRANCH at +54 goes to the THEN drop at +60.
+entry_loop:
+    .word entry_qdo
+    .byte 0x84           ; length=4 + IMMEDIATE
+    .byte 76, 79, 79, 80    ; "LOOP"
+do_loop:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_lit, do_paren_loop
+    .word do_comma
+    .word do_over
+    .word do_here
+    .word do_fetch
+    .word do_minus
+    .word do_comma
+    .word do_dup
+    .word do_zbranch, 27
+    .word do_here
+    .word do_fetch
+    .word do_over
+    .word do_minus
+    .word do_swap
+    .word do_store
+    .word do_branch, 6
+    .word do_drop
+    .word do_drop
+    .word do_exit
+
+; AGAIN ( begin -- ) [IMMEDIATE] : ['] BRANCH , HERE @ - ,
+entry_again:
+    .word entry_loop
+    .byte 0x85           ; length=5 + IMMEDIATE
+    .byte 65, 71, 65, 73, 78    ; "AGAIN"
+do_again:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_lit, do_branch
+    .word do_comma
+    .word do_here
+    .word do_fetch
+    .word do_minus
+    .word do_comma
+    .word do_exit
+
+; WHILE ( begin -- patch begin ) [IMMEDIATE] : ['] 0BRANCH , HERE @ 0 , SWAP
+entry_while:
+    .word entry_again
+    .byte 0x85           ; length=5 + IMMEDIATE
+    .byte 87, 72, 73, 76, 69    ; "WHILE"
+do_while:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_lit, do_zbranch
+    .word do_comma
+    .word do_here
+    .word do_fetch
+    .word do_lit, 0
+    .word do_comma
+    .word do_swap
+    .word do_exit
+
+; REPEAT ( patch begin -- ) [IMMEDIATE] : ['] BRANCH , HERE @ - , HERE @ OVER - SWAP !
+entry_repeat:
+    .word entry_while
+    .byte 0x86           ; length=6 + IMMEDIATE
+    .byte 82, 69, 80, 69, 65, 84    ; "REPEAT"
+do_repeat:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_lit, do_branch
+    .word do_comma
+    .word do_here
+    .word do_fetch
+    .word do_minus
+    .word do_comma
+    .word do_here
+    .word do_fetch
+    .word do_over
+    .word do_minus
+    .word do_swap
+    .word do_store
+    .word do_exit
+
+; CONSTANT ( n -- ) : CREATE ,DOCOL ['] LIT , , ['] EXIT ,
+entry_constant:
+    .word entry_repeat
+    .byte 0x8           ; length=8
+    .byte 67, 79, 78, 83, 84, 65, 78, 84    ; "CONSTANT"
+do_constant:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_create
+    .word do_colon_cfa
+    .word do_lit, do_lit
+    .word do_comma
+    .word do_comma
+    .word do_lit, do_exit
+    .word do_comma
+    .word do_exit
+
+; VARIABLE ( -- ) : CREATE ,DOCOL HERE @ 9 + ['] LIT , , ['] EXIT , 0 ,
+; The cell follows LIT, its address and EXIT: nine bytes past HERE.
+entry_variable:
+    .word entry_constant
+    .byte 0x8           ; length=8
+    .byte 86, 65, 82, 73, 65, 66, 76, 69    ; "VARIABLE"
+do_variable:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_create
+    .word do_colon_cfa
+    .word do_here
+    .word do_fetch
+    .word do_lit, 9
+    .word do_plus
+    .word do_lit, do_lit
+    .word do_comma
+    .word do_comma
+    .word do_lit, do_exit
+    .word do_comma
+    .word do_lit, 0
+    .word do_comma
+    .word do_exit
+
+
+; TUCK ( a b -- b a b ) and NIP ( a b -- b ), the two stack words the
+; layered kernels define in Forth and the examples lean on.
+entry_tuck:
+    .word entry_variable
+    .byte 0x4           ; length=4
+    .byte 84, 85, 67, 75    ; "TUCK"
+do_tuck:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_swap
+    .word do_over
+    .word do_exit
+entry_nip:
+    .word entry_tuck
+    .byte 0x3           ; length=3
+    .byte 78, 73, 80    ; "NIP"
+do_nip:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_swap
+    .word do_drop
+    .word do_exit
+
+; FORGET name : remove name and everything defined after it, so it can be
+; defined again. Reads the name, finds it, and winds LATEST and HERE back to
+; its entry. A core word, or one that is not there, answers "? ".
+; entry_last_core is the end of the core's dictionary; a layer's own words
+; link onto it and name their last through layer_latest.
+entry_last_core:
+entry_forget:
+    .word entry_nip
+    .byte 0x6           ; length=6
+    .byte 70, 79, 82, 71, 69, 84    ; "FORGET"
+do_forget:
+    push r0
+    la r0, do_docol_far
+    jmp (r0)
+    .word do_word
+    .word do_find
+    .word do_forget_tail
+    .word do_exit
+
+; ( c-addr 0 | cfa flag -- ) : the entry starts 4 + namelen bytes before the
+; CFA, and the name just read is still the counted string in word_buffer.
+do_forget_tail:
+    add r1, -3
+    sw r2, 0(r1)        ; save IP
+    pop r0               ; flag
+    ceq r0, z
+    brt forget_bad       ; not found: c-addr still on DS
+    pop r0               ; cfa
+    la r2, word_buffer
+    lbu r2, 0(r2)        ; namelen
+    sub r0, r2
+    add r0, -4           ; r0 = entry address
+    ; Refuse to forget below the dictionary's growth area: those are the
+    ; kernel's and the layer's own words.
+    la r2, dict_start
+    clu r0, r2           ; C = (entry < dict_start)
+    brt forget_core
+    lw r2, 0(r0)         ; the entry's link: the word before it
+    push r0              ; keep entry
+    la r0, var_latest_val
+    sw r2, 0(r0)         ; LATEST = previous word
+    pop r0
+    la r2, var_here_val
+    sw r0, 0(r2)         ; HERE = entry: its bytes are free again
+    lw r2, 0(r1)
+    add r1, 3
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+forget_bad:
+    pop r0               ; discard c-addr
+forget_core:
+    lc r0, 63            ; '?'
+    push r0
+    la r0, forget_q_ret
+    add r1, -3
+    sw r0, 0(r1)
+    la r0, io_emit
+    jmp (r0)
+forget_q_ret:
+    lc r0, 32
+    push r0
+    la r0, forget_sp_ret
+    add r1, -3
+    sw r0, 0(r1)
+    la r0, io_emit
+    jmp (r0)
+forget_sp_ret:
+    lw r2, 0(r1)
+    add r1, 3
+    lw r0, 0(r2)
+    add r2, 3
+    jmp (r0)
+
 ; ============================================================
 ; Phase 2 Test Colon Definitions (using far CFA format)
 ; ============================================================
@@ -3007,9 +3388,9 @@ test_thread:
 ;   io_branch    body of BRANCH: r2 = IP at the offset cell; take it, NEXT
 ;   io_zbranch   body of 0BRANCH: flag on the data stack, r2 as above
 ;   dict_start   label: first byte of the dictionary growth area
-;   layer_latest a .word naming the last dictionary entry: entry_ver, or the
-;                last of the layer's own words, each linked onto the chain
-;                that ends at entry_ver
+;   layer_latest a .word naming the last dictionary entry: entry_last_core,
+;                or the last of the layer's own words, each linked onto the
+;                chain that ends at entry_last_core
 ; io_emit and io_key are called with the return address on top of the return
 ; stack (r1) and must preserve r2; they may use r0, fp, and the data stack.
 ; They return with  lw r0, 0(r1) / add r1, 3 / jmp (r0).
@@ -3081,7 +3462,7 @@ io_bye:
 
 ; This layer adds no words: the dictionary ends where the core's does.
 layer_latest:
-        .word   entry_ver
+        .word   entry_last_core
 
 ; io_branch : body of BRANCH. r2 = IP at the offset cell.
 io_branch:

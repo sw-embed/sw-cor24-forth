@@ -1,0 +1,7 @@
+command = """
+scripts/run-kernel.sh forth.s -u "$(cat examples/18-variable.fth)
+" --speed 0 -n 40000000 2>&1"""
+timeout = 60
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "examples/18-variable.fth on the stand-alone kernel"

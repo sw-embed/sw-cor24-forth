@@ -1,0 +1,9 @@
+number = 25
+slug = "025-loops-constants-forget"
+status = "in-progress"
+description = "Port DO/LOOP/?DO/I/UNLOOP, AGAIN/WHILE/REPEAT, CONSTANT/VARIABLE from the lay..."
+role = "production"
+context_files = []
+created_at = "2026-10-22T17:56:29"
+task_type = "feature"
+commits = []

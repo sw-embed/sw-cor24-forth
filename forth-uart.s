@@ -66,7 +66,7 @@ io_bye:
 
 ; This layer adds no words: the dictionary ends where the core's does.
 layer_latest:
-        .word   entry_ver
+        .word   entry_last_core
 
 ; io_branch : body of BRANCH. r2 = IP at the offset cell.
 io_branch:
