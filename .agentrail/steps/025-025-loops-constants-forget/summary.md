@@ -1,0 +1,1 @@
+Loop, constant, variable, TUCK/NIP/FORGET words in the core; example 20; 80/80 reg-rs, 47/47 demo.sh

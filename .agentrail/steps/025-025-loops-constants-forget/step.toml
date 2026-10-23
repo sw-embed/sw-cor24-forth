@@ -1,9 +1,10 @@
 number = 25
 slug = "025-loops-constants-forget"
-status = "in-progress"
+status = "completed"
 description = "Port DO/LOOP/?DO/I/UNLOOP, AGAIN/WHILE/REPEAT, CONSTANT/VARIABLE from the lay..."
 role = "production"
 context_files = []
 created_at = "2026-10-22T17:56:29"
+completed_at = "2026-10-22T17:56:29"
 task_type = "feature"
-commits = []
+commits = ["55bf1ae718ddcf49ff0bd8946d05537145ce1961"]

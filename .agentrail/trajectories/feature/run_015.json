@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 25,
+    "step": "025-loops-constants-forget"
+  },
+  "action": "ported asm primitives, threaded definitions, new example and tests, rebased WORDS listings",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-10-22T17:56:29"
+}
