@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 26,
+    "step": "026-hog-factorial-bases"
+  },
+  "action": "three example files, three reg-rs tests",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-10-22T18:07:47"
+}

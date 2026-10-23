@@ -1,9 +1,10 @@
 number = 26
 slug = "026-hog-factorial-bases"
-status = "in-progress"
+status = "completed"
 description = "Add examples 21-hog (a never-yielding loop for the SWTOS preemption demo), 22..."
 role = "production"
 context_files = []
 created_at = "2026-10-22T18:07:47"
+completed_at = "2026-10-22T18:07:47"
 task_type = "feature"
-commits = []
+commits = ["6c609e2dfa5f6ae422224dfe39dcd9041099f42c"]
