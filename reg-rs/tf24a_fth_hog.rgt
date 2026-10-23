@@ -1,0 +1,7 @@
+command = """
+scripts/run-kernel.sh forth.s -u "$(cat examples/21-hog.fth)
+" --speed 0 -n 20000000 2>&1"""
+timeout = 60
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "examples/21-hog.fth says HOG then spins to the instruction budget"

@@ -1,0 +1,7 @@
+command = """
+scripts/run-kernel.sh forth.s -u "$(cat examples/22-factorial.fth)
+" --speed 0 -n 60000000 2>&1"""
+timeout = 60
+preprocess = "grep -A 100 '^UART output:' || true"
+exit_code = 0
+desc = "examples/22-factorial.fth on the stand-alone kernel"

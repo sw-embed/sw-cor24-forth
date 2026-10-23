@@ -1,0 +1,1 @@
+Add examples 21-hog (a never-yielding loop for the SWTOS preemption demo), 22-factorial (direct recursion) and 23-bases (BASE, HEX, DECIMAL, binary, octal), with reg-rs tests.
