@@ -1,0 +1,1 @@
+NOT DONE, deferred: a survey of the five core tiers found no use of DO/?DO/LOOP/CONSTANT/VARIABLE (they define them for users but never call them; demos are compiled at run time by the target, not by xcomp). The only top-level code is the QUIT-VECTOR hand-off at the end of highlevel.fth, which image boot replaces. Re-added as a pending step at the end of the saga.
