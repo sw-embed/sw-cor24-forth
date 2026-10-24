@@ -3,8 +3,10 @@
 \ Each line registers a Forth name and the kernel label of its code:
 \     PRIM: <forth-name> <asm-label>
 \ Loaded after compiler/xcomp.fth and before the source being
-\ compiled. Step 004 extends each declaration with the asm body so
-\ the compiler can emit the primitive section of kernel.s too.
+\ compiled.
+\
+\ The primitives' code is in core/prims-asm.fth, which only
+\ scripts/build-image.sh loads.
 
 PRIM: EXIT    do_exit
 PRIM: LIT     do_lit

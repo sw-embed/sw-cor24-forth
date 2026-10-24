@@ -479,13 +479,139 @@ VARIABLE xc-imm       0 xc-imm !
   XC-TRACE-DEPTH
 ;
 
+\ ============================================================
+\ COR24 assembler vocabulary (step 11)
+\ ============================================================
+\ Postfix words that emit one line of COR24 assembler text each,
+\ so the primitives in core/prims.fth are Forth that writes the
+\ kernel's assembly. Operands come first, as Forth does:
+\     r1 -3 addi,         ->  add r1, -3
+\     r0 r2 add,          ->  add r0, r2
+\     r0 0 r2 lw,         ->  lw r0, 0(r2)
+\     r2 la: var_sp_base  ->  la r2, var_sp_base   (label read from input)
+\     r0 -65280 la#,      ->  la r0, -65280
+\     r0 jmp,             ->  jmp (r0)
+\     brt: ht_zero_loop   ->  brt ht_zero_loop
+\     l: do_plus          ->  do_plus:
+\     w: entry_emit / 10 w# / 76 b#   ->  .word / .word / .byte
+\ Registers are words that push their own name.
+
+XC-LIT-STR r0 CONSTANT r0
+XC-LIT-STR r1 CONSTANT r1
+XC-LIT-STR r2 CONSTANT r2
+XC-LIT-STR fp CONSTANT fp
+XC-LIT-STR sp CONSTANT sp
+XC-LIT-STR z  CONSTANT z
+
+XC-LIT-STR add  CONSTANT m-add
+XC-LIT-STR sub  CONSTANT m-sub
+XC-LIT-STR and  CONSTANT m-and
+XC-LIT-STR xor  CONSTANT m-xor
+XC-LIT-STR mul  CONSTANT m-mul
+XC-LIT-STR srl  CONSTANT m-srl
+XC-LIT-STR ceq  CONSTANT m-ceq
+XC-LIT-STR clu  CONSTANT m-clu
+XC-LIT-STR cls  CONSTANT m-cls
+XC-LIT-STR mov  CONSTANT m-mov
+XC-LIT-STR lc   CONSTANT m-lc
+XC-LIT-STR lcu  CONSTANT m-lcu
+XC-LIT-STR la   CONSTANT m-la
+XC-LIT-STR lw   CONSTANT m-lw
+XC-LIT-STR sw   CONSTANT m-sw
+XC-LIT-STR lb   CONSTANT m-lb
+XC-LIT-STR lbu  CONSTANT m-lbu
+XC-LIT-STR sb   CONSTANT m-sb
+XC-LIT-STR push CONSTANT m-push
+XC-LIT-STR pop  CONSTANT m-pop
+XC-LIT-STR jmp  CONSTANT m-jmp
+XC-LIT-STR bra  CONSTANT m-bra
+XC-LIT-STR brt  CONSTANT m-brt
+XC-LIT-STR brf  CONSTANT m-brf
+
+: XC-MN  ( mnemonic -- )  32 EMIT 32 EMIT 32 EMIT 32 EMIT EMIT-COUNTED 32 EMIT ;
+: XC-CS  44 EMIT 32 EMIT ;
+: XC-RR  ( ra rb m -- )  XC-MN SWAP EMIT-COUNTED XC-CS EMIT-COUNTED NL ;
+: XC-RN  ( ra n m -- )   XC-MN SWAP EMIT-COUNTED XC-CS N. NL ;
+: XC-RM  ( ra off rb m -- )
+  XC-MN ROT EMIT-COUNTED XC-CS SWAP N. 40 EMIT EMIT-COUNTED 41 EMIT NL ;
+: XC-RL  ( ra m "label" -- )  XC-MN EMIT-COUNTED XC-CS XC-READ-TOKEN EMIT-COUNTED NL ;
+: XC-L   ( m "label" -- )     XC-MN XC-READ-TOKEN EMIT-COUNTED NL ;
+: XC-R   ( r m -- )           XC-MN EMIT-COUNTED NL ;
+
+: add,   m-add XC-RR ;
+: addi,  m-add XC-RN ;
+: sub,   m-sub XC-RR ;
+: and,   m-and XC-RR ;
+: xor,   m-xor XC-RR ;
+: mul,   m-mul XC-RR ;
+: srl,   m-srl XC-RR ;
+: ceq,   m-ceq XC-RR ;
+: clu,   m-clu XC-RR ;
+: cls,   m-cls XC-RR ;
+: mov,   m-mov XC-RR ;
+: lc,    m-lc  XC-RN ;
+: lcu,   m-lcu XC-RN ;
+: la#,   m-la  XC-RN ;
+: la:    m-la  XC-RL ;
+: lw,    m-lw  XC-RM ;
+: sw,    m-sw  XC-RM ;
+: lb,    m-lb  XC-RM ;
+: lbu,   m-lbu XC-RM ;
+: sb,    m-sb  XC-RM ;
+: push,  m-push XC-R ;
+: pop,   m-pop  XC-R ;
+: jmp,   ( r -- )  m-jmp XC-MN 40 EMIT EMIT-COUNTED 41 EMIT NL ;
+: bra:   m-bra XC-L ;
+: brt:   m-brt XC-L ;
+: brf:   m-brf XC-L ;
+: l:     ( "label" -- )  XC-READ-TOKEN EMIT-COUNTED 58 EMIT NL ;
+: w:     ( "label" -- )  XC-READ-TOKEN EMIT-WORD-LABEL ;
+: w#     ( n -- )  EMIT-WORD-LITERAL ;
+: b#     ( n -- )  EMIT-BYTE-LITERAL ;
+
+\ ---- Kernel mode: build-image.sh sends XC-KERNEL-BEGIN before prims.fth,
+\ so the primitives' text lands inside the captured markers, then
+\ XC-COMPILE-SOURCE adds the dictionary and, at XC-END, the start-up
+\ thread, fff_latest and dict_end. XC-LINK-FROM names the newest
+\ assembly dictionary entry, which the first compiled entry links to.
+VARIABLE xc-kernel       0 xc-kernel !
+VARIABLE xc-first-link   0 xc-first-link !
+: XC-KERNEL-BEGIN  1 xc-kernel !  NL marker-begin EMIT-COUNTED NL ;
+: XC-LINK-FROM  ( "label" -- )  XC-READ-TOKEN XC-COPY-COUNTED xc-first-link ! ;
+
+XC-LIT-STR QUIT            CONSTANT tok-quit
+XC-LIT-STR fff_latest      CONSTANT label-fff-latest
+XC-LIT-STR test_thread     CONSTANT label-test-thread
+XC-LIT-STR dict_end        CONSTANT label-dict-end
+XC-LIT-STR do_quit_vector  CONSTANT label-quit-vector
+XC-LIT-STR do_store        CONSTANT label-store
+
+\ XC-KERNEL-END ( -- )  after the dictionary: LATEST's source, the
+\ start-up thread (QUIT-VECTOR = Forth QUIT, then run it), dict_end.
+: XC-KERNEL-END
+  label-fff-latest EMIT-LABEL-DEF
+  xc-prev-entry @ EMIT-WORD-LABEL
+  label-test-thread EMIT-LABEL-DEF
+  tok-quit COUNT XC-FIND 6 + @          \ label of the compiled QUIT
+  label-lit EMIT-WORD-LABEL
+  DUP EMIT-WORD-LABEL
+  label-quit-vector EMIT-WORD-LABEL
+  label-store EMIT-WORD-LABEL
+  EMIT-WORD-LABEL
+  label-dict-end EMIT-LABEL-DEF
+;
+
 \ XC-COMPILE-SOURCE ( -- )  compile definitions until XC-END.
 : XC-COMPILE-SOURCE
-  0 xc-counter !  0 xc-prev-entry !  0 xc-pending !
-  NL marker-begin EMIT-COUNTED NL
+  0 xc-counter !  0 xc-pending !
+  xc-kernel @ IF xc-first-link @ ELSE 0 THEN xc-prev-entry !   \ link onto the asm entries only in a kernel build
+  xc-kernel @ 0= IF NL marker-begin EMIT-COUNTED NL THEN
   BEGIN
     XC-NEXT-TOKEN
-    DUP tok-end XC-SAME? IF DROP marker-end EMIT-COUNTED NL EXIT THEN
+    DUP tok-end XC-SAME? IF
+      DROP xc-kernel @ IF XC-KERNEL-END THEN
+      marker-end EMIT-COUNTED NL EXIT
+    THEN
     DUP tok-colon XC-SAME? IF DROP XC-COMPILE-DEF ELSE
     DUP tok-backslash XC-SAME? IF DROP ['] \ EXECUTE ELSE
     DUP tok-paren XC-SAME? IF DROP ['] ( EXECUTE ELSE

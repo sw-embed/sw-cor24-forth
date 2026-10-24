@@ -59,10 +59,33 @@ fff_c5_R_64:            ; CFA: push r0; la r0,do_docol_far; jmp (r0)
 Labels are `fff_c<n>_<NAME>` and `fff_e<n>_<NAME>`; letters and digits are
 kept, anything else becomes `_<code>` (`R@` is `R_64`, `-` is `_45`).
 
+## The primitives: an assembler vocabulary
+
+`xcomp.fth` also defines postfix words that print one line of COR24
+assembly each, and `core/prims-asm.fth` writes the kernel's primitive
+section with them:
+
+```forth
+l: do_plus
+  r1 -3 addi,          \ add r1, -3
+  r2 0 r1 sw,          \ sw r2, 0(r1)
+  r0 pop,              \ pop r0
+  r2 la: var_sp_base   \ la r2, var_sp_base
+  r0 jmp,              \ jmp (r0)
+```
+
+`scripts/build-image.sh` sends `XC-KERNEL-BEGIN`, then prims.fth and
+prims-asm.fth (which prints the primitives), then `XC-COMPILE-SOURCE`
+with the core; at `XC-END` the compiler adds `fff_latest`, the start-up
+thread and `dict_end`. Test builds (`build-kernel.sh`) load only the
+registry, prims.fth, so they skip the primitives.
+
+prims-asm.fth was converted once (2026-10-24) from the hand-written
+assembly; the generated kernel.s assembled to the same 8,168 bytes.
+
 ## Not yet
 
-`DO ?DO LOOP` and `CONSTANT`/`VARIABLE` (no core tier uses them), the
-primitive bodies themselves, and booting a kernel
+`DO ?DO LOOP` and `CONSTANT`/`VARIABLE` (no core tier uses them), and booting a kernel
 from the emitted image. See `../docs/status.md`.
 
 ## Tests

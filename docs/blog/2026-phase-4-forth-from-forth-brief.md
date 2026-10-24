@@ -13,8 +13,11 @@ reads the five core tiers as source and emits their dictionary as COR24
 assembly; `scripts/build-image.sh` splices that dictionary into the kernel,
 which boots straight into the Forth `QUIT`. The assembly bootstrap
 interpreter that phases 2 and 3 could not get rid of is gone from the image.
-The primitives underneath are still hand-written assembly; emitting those
-from Forth too is the next step, and the post should say so plainly.
+Since 2026-10-24 the primitives are Forth too: `core/prims-asm.fth`
+writes them in a small COR24 assembler vocabulary (`r0 r2 add,`), so the
+generated kernel.s has no assembly template behind it. That vocabulary
+prints assembler text that cor24-asm still assembles; there is no Forth
+instruction encoder yet.
 
 ## 2. Numbers
 
@@ -195,10 +198,11 @@ Bugs found while building this (state as of 2026-10-24):
 
 Open work:
 
-- Emit the primitives from Forth (`core/prims.fth` grows the assembly
-  bodies), so no assembly in forth-from-forth is hand-written. Saga step
-  "emit-primitives-from-forth".
-- Drop the unused FIND hash table along with that.
+- Done 2026-10-24: the primitives are written in a Forth assembler
+  vocabulary (`core/prims-asm.fth`); kernel.s is byte-identical to the
+  hand-written version it replaced. Next: drop the unused FIND hash table
+  (now a Forth edit), and an instruction encoder so the image needs no
+  external assembler.
 - `DO ?DO LOOP` and `CONSTANT`/`VARIABLE` in the cross-compiler: deferred,
   because no core tier uses them.
 - Part 5's thin second backend (one Forth source, two targets) and the
