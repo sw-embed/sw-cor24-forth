@@ -1,10 +1,7 @@
 number = 8
-slug = "deck-update"
+slug = "web-tab-4"
 status = "pending"
-description = """
-Update the "Forth on COR24" presentation to cover four tabs.
-
-The generator a..."""
+description = "Add the fourth tab, forth-from-forth, to ../web-sw-cor24-forth (work in that ..."
 role = "production"
 context_files = []
 created_at = "2026-10-23T10:19:52"

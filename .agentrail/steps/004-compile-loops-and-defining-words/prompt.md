@@ -1,0 +1,3 @@
+Teach the cross-compiler DO ?DO LOOP and the defining words CONSTANT and VARIABLE, plus anything else the five core tiers need at top level that is not a colon definition (survey the tiers first: grep every top-level line that does not start with `:` or `\`).
+
+DO/?DO/LOOP compile (DO)/(?DO)/(LOOP) with offsets as core/lowlevel.fth does. CONSTANT and VARIABLE at top level emit a dictionary entry whose body matches what core/lowlevel.fth's CONSTANT/VARIABLE build at runtime (CREATE ,DOCOL LIT n EXIT, and LIT <addr> EXIT with the cell after it). Same test-first rule and byte comparison against the phase-3 kernel as step 3a, with new lines in compiler/tests/features.fth.

@@ -1,0 +1,5 @@
+Teach the cross-compiler control flow: IF ELSE THEN, BEGIN UNTIL AGAIN WHILE REPEAT.
+
+In XC-COLLECT-BODY these tokens are not resolved as words: they lay down `do_zbranch` / `do_branch` plus an offset cell, exactly as core/minimal.fth's IMMEDIATE words do at runtime (offset = target_addr - patch_addr, where patch_addr is the offset cell). The body buffer is a list of cells, so offsets are computed from buffer positions (3 bytes per cell; a LIT item is 2 cells) and stored as literal-valued items. Keep a small compile-time stack for open IF/BEGIN/WHILE positions.
+
+Test first: add one definition per construct to compiler/tests/features.fth (and a nested IF inside BEGIN...UNTIL). Correctness check: for each, the emitted body bytes must equal what the phase-3 kernel compiles for the same source (dump the definition's body with `' NAME 6 + <n> DUMP`-style @ loop at the REPL, or compare with SEE output). Rebase tf24a_fff_xc_compile_test only after that check. Gate every commit with the step-2 gate (load clean, runtime.fth byte-identical, self-test) plus the feature test.

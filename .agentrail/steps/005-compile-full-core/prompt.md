@@ -1,0 +1,3 @@
+Compile all five core tiers (runtime, minimal, lowlevel, midlevel, highlevel) in one run and prove the result works.
+
+(a) scripts/build-kernel.sh with the five tiers as source emits a dictionary covering every colon definition (grep -c '^: ' forth-from-forth/core/*.fth) with zero `; ?` unresolved lines; the build prints the count. (b) Extend selftest-scaffold.s (or a second scaffold) with the extra primitives the tiers need as real code copied from forth-from-forth/kernel.s, link the emitted dictionary, and run examples/14-fib.fth's FIB from a test thread: output 1 1 2 3 5 8 13 21 34 55 89. (c) Record emitted lines/bytes and build time in forth-from-forth/docs/kernel-sizes.md. (d) reg-rs green, new test locking (b).

@@ -1,10 +1,10 @@
-number = 5
-slug = "delete-bootstrap-and-rebaseline"
+number = 10
+slug = "deck-update"
 status = "pending"
 description = """
-Validate the deletion and re-baseline.
+Update the "Forth on COR24" presentation to cover four tabs.
 
-(a) Prove nothing dead is emitted: a ..."""
+The generator a..."""
 role = "production"
 context_files = []
 created_at = "2026-10-23T10:19:52"
