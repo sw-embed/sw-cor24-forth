@@ -1,10 +1,10 @@
-fff_entry_DUP:
+fff_e1_DUP:
 .word 0
 .byte 3
 .byte 68
 .byte 85
 .byte 80
-fff_cfa_DUP:
+fff_c1_DUP:
 .byte 125
 .byte 41
 .word do_docol_far
@@ -12,14 +12,14 @@ fff_cfa_DUP:
 .word do_sp_fetch
 .word do_fetch
 .word do_exit
-fff_entry_DROP:
-.word fff_entry_DUP
+fff_e2_DROP:
+.word fff_e1_DUP
 .byte 4
 .byte 68
 .byte 82
 .byte 79
 .byte 80
-fff_cfa_DROP:
+fff_c2_DROP:
 .byte 125
 .byte 41
 .word do_docol_far
@@ -30,14 +30,14 @@ fff_cfa_DROP:
 .word do_plus
 .word do_sp_store
 .word do_exit
-fff_entry_OVER:
-.word fff_entry_DROP
+fff_e3_OVER:
+.word fff_e2_DROP
 .byte 4
 .byte 79
 .byte 86
 .byte 69
 .byte 82
-fff_cfa_OVER:
+fff_c3_OVER:
 .byte 125
 .byte 41
 .word do_docol_far
@@ -48,20 +48,20 @@ fff_cfa_OVER:
 .word do_plus
 .word do_fetch
 .word do_exit
-fff_entry_SWAP:
-.word fff_entry_OVER
+fff_e4_SWAP:
+.word fff_e3_OVER
 .byte 4
 .byte 83
 .byte 87
 .byte 65
 .byte 80
-fff_cfa_SWAP:
+fff_c4_SWAP:
 .byte 125
 .byte 41
 .word do_docol_far
 .byte 38
 .word do_tor
-.word fff_cfa_DUP
+.word fff_c1_DUP
 .word do_rfrom
 .word do_sp_fetch
 .word do_lit
@@ -69,12 +69,12 @@ fff_cfa_SWAP:
 .word do_plus
 .word do_store
 .word do_exit
-fff_entry_R@:
-.word fff_entry_SWAP
+fff_e5_R_64:
+.word fff_e4_SWAP
 .byte 2
 .byte 82
 .byte 64
-fff_cfa_R@:
+fff_c5_R_64:
 .byte 125
 .byte 41
 .word do_docol_far
@@ -85,8 +85,8 @@ fff_cfa_R@:
 .word do_plus
 .word do_fetch
 .word do_exit
-fff_entry_INVERT:
-.word fff_entry_R@
+fff_e6_INVERT:
+.word fff_e5_R_64
 .byte 6
 .byte 73
 .byte 78
@@ -94,67 +94,67 @@ fff_entry_INVERT:
 .byte 69
 .byte 82
 .byte 84
-fff_cfa_INVERT:
+fff_c6_INVERT:
 .byte 125
 .byte 41
 .word do_docol_far
 .byte 38
-.word fff_cfa_DUP
+.word fff_c1_DUP
 .word do_nand
 .word do_exit
-fff_entry_AND:
-.word fff_entry_INVERT
+fff_e7_AND:
+.word fff_e6_INVERT
 .byte 3
 .byte 65
 .byte 78
 .byte 68
-fff_cfa_AND:
+fff_c7_AND:
 .byte 125
 .byte 41
 .word do_docol_far
 .byte 38
 .word do_nand
-.word fff_cfa_INVERT
+.word fff_c6_INVERT
 .word do_exit
-fff_entry_OR:
-.word fff_entry_AND
+fff_e8_OR:
+.word fff_e7_AND
 .byte 2
 .byte 79
 .byte 82
-fff_cfa_OR:
+fff_c8_OR:
 .byte 125
 .byte 41
 .word do_docol_far
 .byte 38
-.word fff_cfa_INVERT
-.word fff_cfa_SWAP
-.word fff_cfa_INVERT
+.word fff_c6_INVERT
+.word fff_c4_SWAP
+.word fff_c6_INVERT
 .word do_nand
 .word do_exit
-fff_entry_XOR:
-.word fff_entry_OR
+fff_e9_XOR:
+.word fff_e8_OR
 .byte 3
 .byte 88
 .byte 79
 .byte 82
-fff_cfa_XOR:
+fff_c9_XOR:
 .byte 125
 .byte 41
 .word do_docol_far
 .byte 38
-.word fff_cfa_OVER
-.word fff_cfa_OVER
+.word fff_c3_OVER
+.word fff_c3_OVER
 .word do_nand
-.word fff_cfa_DUP
+.word fff_c1_DUP
 .word do_tor
 .word do_nand
-.word fff_cfa_SWAP
+.word fff_c4_SWAP
 .word do_rfrom
 .word do_nand
 .word do_nand
 .word do_exit
-fff_entry_NEGATE:
-.word fff_entry_XOR
+fff_e10_NEGATE:
+.word fff_e9_XOR
 .byte 6
 .byte 78
 .byte 69
@@ -162,33 +162,33 @@ fff_entry_NEGATE:
 .byte 65
 .byte 84
 .byte 69
-fff_cfa_NEGATE:
+fff_c10_NEGATE:
 .byte 125
 .byte 41
 .word do_docol_far
 .byte 38
-.word fff_cfa_INVERT
+.word fff_c6_INVERT
 .word do_lit
 .word 1
 .word do_plus
 .word do_exit
-fff_entry_MINUS:
-.word fff_entry_NEGATE
+fff_e11__45:
+.word fff_e10_NEGATE
 .byte 1
 .byte 45
-fff_cfa_MINUS:
+fff_c11__45:
 .byte 125
 .byte 41
 .word do_docol_far
 .byte 38
-.word fff_cfa_NEGATE
+.word fff_c10_NEGATE
 .word do_plus
 .word do_exit
-fff_entry_COLON:
-.word fff_entry_MINUS
+fff_e12__58:
+.word fff_e11__45
 .byte 1
 .byte 58
-fff_cfa_COLON:
+fff_c12__58:
 .byte 125
 .byte 41
 .word do_docol_far
@@ -200,20 +200,20 @@ fff_cfa_COLON:
 .word do_lit
 .word 3
 .word do_plus
-.word fff_cfa_DUP
+.word fff_c1_DUP
 .word do_cfetch
 .word do_lit
 .word 64
-.word fff_cfa_OR
-.word fff_cfa_SWAP
+.word fff_c8_OR
+.word fff_c4_SWAP
 .word do_cstore
 .word do_rbrac
 .word do_exit
-fff_entry_SEMI:
-.word fff_entry_COLON
+fff_e13__59:
+.word fff_e12__58
 .byte 129
 .byte 59
-fff_cfa_SEMI:
+fff_c13__59:
 .byte 125
 .byte 41
 .word do_docol_far
@@ -226,8 +226,35 @@ fff_cfa_SEMI:
 .word do_lit
 .word 3
 .word do_plus
-.word fff_cfa_DUP
+.word fff_c1_DUP
 .word do_cfetch
 .word do_lit
 .word 191
-.word fff_cfa_AND
+.word fff_c7_AND
+.word fff_c4_SWAP
+.word do_cstore
+.word do_lit
+.word 0
+.word do_state
+.word do_store
+.word do_exit
+fff_e14__58NONAME:
+.word fff_e13__59
+.byte 7
+.byte 58
+.byte 78
+.byte 79
+.byte 78
+.byte 65
+.byte 77
+.byte 69
+fff_c14__58NONAME:
+.byte 125
+.byte 41
+.word do_docol_far
+.byte 38
+.word do_here
+.word do_fetch
+.word do_comma_docol
+.word do_rbrac
+.word do_exit

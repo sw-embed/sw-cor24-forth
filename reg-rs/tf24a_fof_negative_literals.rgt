@@ -2,7 +2,7 @@ command = """
 scripts/run-kernel.sh forth-on-forthish/kernel.s -u "$(cat forth-on-forthish/core/runtime.fth forth-on-forthish/core/minimal.fth forth-on-forthish/core/lowlevel.fth forth-on-forthish/core/midlevel.fth forth-on-forthish/core/highlevel.fth)
 DEPTH . -1 . -65280 . 5 -1 + . : T -1 ; T . HEX -FF . DECIMAL DEPTH .
 " --speed 0 -n 300000000 2>&1"""
-timeout = 60
-preprocess = "grep -A 40 '^UART output:' | grep -v '^ ok$' || true"
+timeout = 600
+preprocess = "sed -n '/^UART output:/,$p' | grep -v '^ ok$' || true"
 exit_code = 0
 desc = "forth-on-forthish NUMBER accepts negative literals and keeps the stack balanced"

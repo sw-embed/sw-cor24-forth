@@ -13,13 +13,19 @@
 # share one, and it is removed on exit. The emulator's exit status is the
 # script's.
 #
+# cor24-emu stops after 10 s of wall-clock time by default, which a busy
+# machine or a parallel test run reaches long before the instruction budget
+# (-n) runs out, silently cutting the output short. So unless the caller
+# passes -t/--time, this script passes --time ${RUN_KERNEL_TIME:-600}; -n
+# remains the real limit.
+#
 # Tools are found on PATH first. Failing that, COR24_ASM / COR24_EMU name
 # them explicitly, then the sibling checkouts' release builds, then the
 # binaries vendored by sw-tos.
 set -euo pipefail
 
 if [ $# -lt 1 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-  sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//' >&2
+  sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 2
 fi
 
@@ -66,5 +72,11 @@ LGO="$WORK/$(basename "${KERNEL%.s}").lgo"
 
 "$ASM" "$KERNEL" -o "$LGO"
 exec_status=0
-"$EMU" --lgo "$LGO" "$@" || exec_status=$?
+TIME_ARGS=(--time "${RUN_KERNEL_TIME:-600}")
+for arg in "$@"; do
+  case "$arg" in
+    -t|--time) TIME_ARGS=() ;;
+  esac
+done
+"$EMU" --lgo "$LGO" ${TIME_ARGS[@]+"${TIME_ARGS[@]}"} "$@" || exec_status=$?
 exit "$exec_status"

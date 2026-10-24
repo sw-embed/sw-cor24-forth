@@ -23,4 +23,4 @@ done
 INPUT="$(cat "${CORE_FILES[@]}" "$EXAMPLE" 2>/dev/null)
 "
 "$FIF/../scripts/run-kernel.sh" "$FIF/kernel.s" -u "$INPUT" --speed 0 -n 400000000 2>&1 \
-  | grep "^UART output:" -A 200 || true
+  | sed -n '/^UART output:/,$p' || true

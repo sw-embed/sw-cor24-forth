@@ -927,6 +927,172 @@ VARIABLE xc-prev-entry
   marker-end EMIT-COUNTED NL
 ;
 
+\ ============================================================
+\ Source-driven compiler (saga phase-4-tab-4 step 002)
+\ ============================================================
+\ XC-COMPILE-SOURCE reads target Forth source from the input
+\ stream until the token XC-END and emits one dictionary entry
+\ per colon definition. The primitive symbol table comes from
+\ core/prims.fth (PRIM: lines); each definition registers its
+\ own name before its body is read, so later bodies (and the
+\ definition itself, for recursion) resolve to it.
+\
+\ The header's flags_len byte must say IMMEDIATE, but IMMEDIATE
+\ follows the `;`. The assembler has no equates to patch it, so
+\ the body is collected into a buffer first, one token after `;`
+\ is read to see whether it is IMMEDIATE (if not, it is pushed
+\ back for the driver), and only then is the entry emitted.
+
+\ XC-LIT-STR ( "tok" -- counted )  copy the next token to HERE.
+\ Used at load time with CONSTANT to name the tokens the
+\ compiler must recognise without executing them.
+: XC-LIT-STR  XC-READ-TOKEN XC-COPY-COUNTED ;
+XC-LIT-STR ;         CONSTANT tok-semi
+XC-LIT-STR :         CONSTANT tok-colon
+XC-LIT-STR IMMEDIATE CONSTANT tok-immediate
+XC-LIT-STR \         CONSTANT tok-backslash
+XC-LIT-STR (         CONSTANT tok-paren
+XC-LIT-STR [']       CONSTANT tok-tick
+XC-LIT-STR XC-END    CONSTANT tok-end
+
+\ XC-SAME? ( c1 c2 -- flag )  are two counted strings equal?
+: XC-SAME?
+  OVER C@ OVER C@ = 0= IF 2DROP 0 EXIT THEN
+  DUP C@ >R  1 + SWAP 1 +  R> STR=
+;
+
+\ PRIM: ( "name" "label" -- )  register an asm primitive.
+: PRIM:  XC-READ-TOKEN XC-COPY-COUNTED  XC-READ-TOKEN XC-COPY-COUNTED  XC-REGISTER ;
+
+\ ---- Label mangling: fff_c<n>_<NAME>, fff_e<n>_<NAME>.
+\ Letters and digits are kept; any other character becomes
+\ _<decimal code>, so R@ -> R_64 and - -> _45. The counter keeps
+\ labels unique even if a name is defined twice.
+: XC-ALNUM?  ( c -- flag )
+  DUP 48 < IF DROP 0 EXIT THEN
+  DUP 58 < IF DROP -1 EXIT THEN
+  DUP 65 < IF DROP 0 EXIT THEN
+  DUP 91 < IF DROP -1 EXIT THEN
+  DUP 97 < IF DROP 0 EXIT THEN
+  123 <
+;
+: XC-MANGLE-CHAR,  ( c -- )  DUP XC-ALNUM? IF C, ELSE 95 C, NUM-C, THEN ;
+: XC-MANGLE,  ( counted -- )  COUNT 0 ?DO DUP C@ XC-MANGLE-CHAR, 1 + LOOP DROP ;
+
+\ XC-MAKE-LABEL ( name n kind-char -- label )
+: XC-MAKE-LABEL
+  HERE @ >R  0 C,  102 C, 102 C, 102 C, 95 C,
+  C,  NUM-C,  95 C,  XC-MANGLE,
+  HERE @ R@ - 1 -  R@ C!  R>
+;
+
+\ ---- Body buffer: 2 cells per item, ( kind value ).
+\ kind 0 = .word <label>, 1 = LIT <n>, 2 = unresolved token.
+VARIABLE xc-body
+HERE @ xc-body !  HERE @ 3000 + HERE !
+VARIABLE xc-body-end
+: XC-BODY-RESET  xc-body @ xc-body-end ! ;
+: XC-BODY,  ( value kind -- )
+  xc-body-end @ !  xc-body-end @ 3 + !  xc-body-end @ 6 + xc-body-end !
+;
+
+\ XC-RESOLVE ( counted -- value kind )
+: XC-RESOLVE
+  DUP COUNT XC-FIND ?DUP IF NIP 6 + @ 0 EXIT THEN
+  DUP NUMBER 0= IF NIP 1 EXIT THEN
+  DROP XC-COPY-COUNTED 2
+;
+
+\ ---- Tracing. `1 xc-trace !` before XC-COMPILE-SOURCE writes every
+\ token read, and the data-stack depth after each definition, as
+\ `;` comment lines in the emitted asm. The assembler ignores them,
+\ so a traced build assembles to the same bytes. Use it to find
+\ where compilation goes wrong (build-kernel.sh XC_TRACE=1).
+VARIABLE xc-trace     0 xc-trace !
+: XC-TRACE-TOKEN  ( counted -- counted )
+  xc-trace @ IF 59 EMIT 32 EMIT 116 EMIT 32 EMIT DUP EMIT-COUNTED NL THEN ;
+: XC-TRACE-DEPTH  ( -- )
+  xc-trace @ IF 59 EMIT 32 EMIT 100 EMIT 32 EMIT DEPTH N. NL THEN ;
+
+\ XC-COLLECT-BODY ( -- )  read tokens up to `;` into the buffer.
+: XC-COLLECT-BODY
+  XC-BODY-RESET
+  BEGIN
+    XC-READ-TOKEN XC-TRACE-TOKEN
+    DUP tok-semi XC-SAME? IF DROP EXIT THEN
+    DUP tok-backslash XC-SAME? IF DROP ['] \ EXECUTE ELSE
+    DUP tok-paren XC-SAME? IF DROP ['] ( EXECUTE ELSE
+    DUP tok-tick XC-SAME? IF
+      DROP label-lit 0 XC-BODY,  XC-READ-TOKEN XC-RESOLVE XC-BODY,
+    ELSE
+      XC-RESOLVE XC-BODY,
+    THEN THEN THEN
+  AGAIN
+;
+
+\ XC-EMIT-BODY ( -- )  write the buffered body as asm text.
+: XC-EMIT-BODY
+  xc-body @
+  BEGIN DUP xc-body-end @ < WHILE
+    DUP 3 + @  OVER @            \ addr value kind
+    DUP 0= IF DROP EMIT-WORD-LABEL ELSE
+    1 = IF label-lit EMIT-WORD-LABEL EMIT-WORD-LITERAL ELSE
+      59 EMIT 32 EMIT 63 EMIT 32 EMIT EMIT-COUNTED NL   \ "; ? tok"
+    THEN THEN
+    6 +
+  REPEAT
+  DROP
+;
+
+VARIABLE xc-pending   0 xc-pending !
+VARIABLE xc-imm       0 xc-imm !
+
+: XC-NEXT-TOKEN  ( -- counted )
+  xc-pending @ ?DUP IF 0 xc-pending ! EXIT THEN  XC-READ-TOKEN XC-TRACE-TOKEN ;
+
+\ XC-EMIT-NAME ( name -- )  flags_len byte, then the name bytes.
+: XC-EMIT-NAME
+  DUP C@ xc-imm @ IF 128 + THEN EMIT-BYTE-LITERAL
+  COUNT 0 ?DO DUP C@ EMIT-BYTE-LITERAL 1 + LOOP DROP
+;
+
+\ XC-COMPILE-DEF ( -- )  the `:` has been read.
+: XC-COMPILE-DEF
+  XC-READ-TOKEN XC-COPY-COUNTED                 \ name
+  xc-counter @ 1 + xc-counter !
+  DUP xc-counter @ 99 XC-MAKE-LABEL             \ name cfa
+  2DUP XC-REGISTER
+  XC-COLLECT-BODY
+  0 xc-imm !
+  XC-READ-TOKEN DUP tok-immediate XC-SAME?
+  IF DROP -1 xc-imm ! ELSE xc-pending ! THEN
+  OVER xc-counter @ 101 XC-MAKE-LABEL           \ name cfa entry
+  DUP EMIT-LABEL-DEF
+  xc-prev-entry @ ?DUP IF EMIT-WORD-LABEL ELSE 0 EMIT-WORD-LITERAL THEN
+  xc-prev-entry !                               \ name cfa
+  SWAP XC-EMIT-NAME
+  EMIT-LABEL-DEF
+  EMIT-FAR-DOCOL
+  XC-EMIT-BODY
+  label-exit EMIT-WORD-LABEL
+  XC-TRACE-DEPTH
+;
+
+\ XC-COMPILE-SOURCE ( -- )  compile definitions until XC-END.
+: XC-COMPILE-SOURCE
+  0 xc-counter !  0 xc-prev-entry !  0 xc-pending !
+  NL marker-begin EMIT-COUNTED NL
+  BEGIN
+    XC-NEXT-TOKEN
+    DUP tok-end XC-SAME? IF DROP marker-end EMIT-COUNTED NL EXIT THEN
+    DUP tok-colon XC-SAME? IF DROP XC-COMPILE-DEF ELSE
+    DUP tok-backslash XC-SAME? IF DROP ['] \ EXECUTE ELSE
+    DUP tok-paren XC-SAME? IF DROP ['] ( EXECUTE ELSE
+      59 EMIT 32 EMIT 63 EMIT 32 EMIT EMIT-COUNTED NL   \ top-level token not compiled
+    THEN THEN THEN
+  AGAIN
+;
+
 : COMPILE-RUNTIME
   NL
   marker-begin EMIT-COUNTED NL

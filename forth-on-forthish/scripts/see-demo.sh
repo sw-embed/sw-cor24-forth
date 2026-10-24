@@ -17,6 +17,6 @@ MARKER='61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 10 EMIT'
 INPUT=$'\n'"$(cat "${CORE_FILES[@]}")"$'\n'"$MARKER"$'\n: SQUARE DUP * ;\n: CUBE DUP SQUARE * ;\nDUMP-ALL\n'
 
 "$FOF/../scripts/run-kernel.sh" "$FOF/kernel.s" -u "$INPUT" --speed 0 -n 1000000000 2>&1 \
-  | grep "^UART output:" -A 1000 \
+  | sed -n '/^UART output:/,$p' \
   | awk '/========/{flag=1; next} flag' \
   | sed '/^ ok$/d; /^$/d; /^Executed/q'

@@ -51,5 +51,5 @@ echo "test-kernel.sh: wrote $SELFTEST_S ($(wc -l < "$SELFTEST_S") lines)" >&2
 
 # Step 3: run the self-test, capture UART output
 "$(dirname "$0")/../../scripts/run-kernel.sh" "$SELFTEST_S" --speed 0 -t 60 -n 200000000 2>&1 \
-  | grep -A 100 '^UART output:' \
-  | sed -n '/^UART output:/,$p'
+  | sed -n '/^UART output:/,$p' \
+  | cat

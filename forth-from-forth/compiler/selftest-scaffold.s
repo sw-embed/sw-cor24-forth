@@ -12,7 +12,7 @@
 ;     do_sp_fetch, do_sp_store, do_rp_fetch, do_tor, do_rfrom,
 ;     do_fetch, do_store, do_plus, do_nand, do_emit, do_bye)
 ;   - test_thread: threaded-code test that invokes each of the
-;     10 Forth colon defs (fff_cfa_DUP ... fff_cfa_NEGATE) with
+;     10 Forth colon defs (fff_c1_DUP ... fff_c10_NEGATE) with
 ;     known inputs and EMITs single bytes so UART output is
 ;     unambiguous.
 ;
@@ -231,6 +231,8 @@ do_cstore:
     bra do_cstore
 do_comma:
     bra do_comma
+do_here:
+    bra do_here
 
 ; ============================================================
 ; System variable storage (needed for sp_base snapshot)
@@ -248,7 +250,7 @@ test_thread:
     ; --- DUP test: push 'A', DUP, emit twice, NL ---
     .word do_lit
     .word 65                 ; 'A'
-    .word fff_cfa_DUP
+    .word fff_c1_DUP
     .word do_emit            ; emit 'A'
     .word do_emit            ; emit 'A' (from the DUP'd copy)
     .word do_lit
@@ -260,7 +262,7 @@ test_thread:
     .word 65                 ; 'A'
     .word do_lit
     .word 66                 ; 'B'
-    .word fff_cfa_DROP
+    .word fff_c2_DROP
     .word do_emit            ; emit 'A'
     .word do_lit
     .word 10
@@ -272,7 +274,7 @@ test_thread:
     .word 65                 ; 'A'
     .word do_lit
     .word 66                 ; 'B'
-    .word fff_cfa_OVER
+    .word fff_c3_OVER
     .word do_emit            ; pop top A → 'A'
     .word do_emit            ; pop B → 'B'
     .word do_emit            ; pop A → 'A'
@@ -286,7 +288,7 @@ test_thread:
     .word 65                 ; 'A'
     .word do_lit
     .word 66                 ; 'B'
-    .word fff_cfa_SWAP
+    .word fff_c4_SWAP
     .word do_emit            ; pop top A
     .word do_emit            ; pop B
     .word do_lit
@@ -299,7 +301,7 @@ test_thread:
     .word 53                 ; '5'
     .word do_lit
     .word 51                 ; '3'
-    .word fff_cfa_AND
+    .word fff_c7_AND
     .word do_emit            ; emit '1'
     .word do_lit
     .word 10
@@ -311,7 +313,7 @@ test_thread:
     .word 53                 ; '5'
     .word do_lit
     .word 51                 ; '3'
-    .word fff_cfa_OR
+    .word fff_c8_OR
     .word do_emit            ; emit '7'
     .word do_lit
     .word 10
@@ -323,7 +325,7 @@ test_thread:
     .word 65                 ; 'A'
     .word do_lit
     .word 1
-    .word fff_cfa_XOR
+    .word fff_c9_XOR
     .word do_emit            ; emit '@'
     .word do_lit
     .word 10
@@ -335,9 +337,9 @@ test_thread:
     .word do_lit
     .word 82                 ; 'R'
     .word do_tor             ; >R. RS top: 82. DS: ()
-    .word fff_cfa_R@         ; reads RS top non-destructively → DS: (82)
+    .word fff_c5_R_64         ; reads RS top non-destructively → DS: (82)
     .word do_rfrom           ; pops RS → DS: (82 82)
-    .word fff_cfa_DROP       ; drop the original R>'d value → DS: (82)
+    .word fff_c2_DROP       ; drop the original R>'d value → DS: (82)
     .word do_emit            ; emit 'R'
     .word do_lit
     .word 10
@@ -355,8 +357,8 @@ test_thread:
     ; emit → 'Z'.
     .word do_lit
     .word 90                 ; 'Z'
-    .word fff_cfa_INVERT
-    .word fff_cfa_INVERT
+    .word fff_c6_INVERT
+    .word fff_c6_INVERT
     .word do_emit            ; expect 'Z'
     .word do_lit
     .word 10
@@ -366,8 +368,8 @@ test_thread:
     ; Push 'N' (78), NEGATE NEGATE, emit → 'N'.
     .word do_lit
     .word 78                 ; 'N'
-    .word fff_cfa_NEGATE
-    .word fff_cfa_NEGATE
+    .word fff_c10_NEGATE
+    .word fff_c10_NEGATE
     .word do_emit            ; expect 'N'
     .word do_lit
     .word 10
@@ -379,7 +381,7 @@ test_thread:
     .word 68                 ; 'D'
     .word do_lit
     .word 3
-    .word fff_cfa_MINUS
+    .word fff_c11__45
     .word do_emit            ; expect 'A'
     .word do_lit
     .word 10
