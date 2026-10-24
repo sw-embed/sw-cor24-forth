@@ -1,0 +1,1 @@
+6a done: build-image.sh generates kernel.s = primitive template + cross-compiled core; boots straight into Forth QUIT (first output 0.71 M instructions vs 149.56 M for forth-on-forthish). Examples match forth-on-forthish (except where fof has a stray bootstrap stack cell); LED follows S2. 6b (primitive bodies emitted from prims.fth) split into its own step after the web tab.
