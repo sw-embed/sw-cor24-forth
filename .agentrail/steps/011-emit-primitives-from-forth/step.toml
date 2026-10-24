@@ -1,9 +1,10 @@
 number = 11
 slug = "emit-primitives-from-forth"
-status = "pending"
+status = "completed"
 description = "Emit the primitives from Forth too, so forth-from-forth/kernel.s contains no ..."
 role = "production"
 context_files = []
 created_at = "2026-10-23T21:43:18"
+completed_at = "2026-10-23T23:08:49"
 task_type = "feature"
-commits = []
+commits = ["5b874f55a29473e376543ec784e7bd04253577ba"]

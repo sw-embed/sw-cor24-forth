@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 11,
+    "step": "emit-primitives-from-forth"
+  },
+  "action": "instruction-form survey, Forth assembler vocabulary, one-time converter, byte-identical gate, registry/asm split",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-10-23T23:08:49"
+}
