@@ -1,9 +1,10 @@
 number = 1
 slug = "parser-integration-fix"
-status = "in-progress"
+status = "completed"
 description = "Fix the forth-from-forth parser integration bug so source-driven compilation ..."
 role = "production"
 context_files = []
 created_at = "2026-10-23T10:19:52"
+completed_at = "2026-10-23T19:35:38"
 task_type = "feature"
-commits = []
+commits = ["6e0aa5c5c66eeff6e4d888bc07f2e7ae5567f6f6"]

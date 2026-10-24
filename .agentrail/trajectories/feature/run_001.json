@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 1,
+    "step": "parser-integration-fix"
+  },
+  "action": "reproduced via run-kernel.sh, isolated with --dump and minimal REPL inputs, fixed NUMBER, reg-rs create, emulator -t for parallel runs",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-10-23T19:35:38"
+}
