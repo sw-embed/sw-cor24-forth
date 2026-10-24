@@ -66,12 +66,14 @@ assembly each, and `core/prims-asm.fth` writes the kernel's primitive
 section with them:
 
 ```forth
-l: do_plus
-  r1 -3 addi,          \ add r1, -3
-  r2 0 r1 sw,          \ sw r2, 0(r1)
-  r0 pop,              \ pop r0
-  r2 la: var_sp_base   \ la r2, var_sp_base
-  r0 jmp,              \ jmp (r0)
+l: do_plus              \ do_plus:
+  fp pop,               \ pop fp        ( n2 )
+  r0 pop,               \ pop r0        ( n1 )
+  r0 fp add,            \ add r0, fp
+  r0 push,              \ push r0
+  r0 0 r2 lw,           \ lw r0, 0(r2)  ( NEXT )
+  r2 3 addi,            \ add r2, 3
+  r0 jmp,               \ jmp (r0)
 ```
 
 `scripts/build-image.sh` sends `XC-KERNEL-BEGIN`, then prims.fth and
