@@ -76,6 +76,11 @@ l: do_plus              \ do_plus:
   r0 jmp,               \ jmp (r0)
 ```
 
+The compiler runs on forth-from-forth's own kernel by default (it is a
+fixed point); `XC_HOST=forth-on-forthish/kernel.s` restarts the chain
+from the hand-written phase-3 kernel. Scripts set `xc-bye`, so the
+emulator halts at `XC-END` instead of idling to its instruction budget.
+
 `scripts/build-image.sh` sends `XC-KERNEL-BEGIN`, then prims.fth and
 prims-asm.fth (which prints the primitives), then `XC-COMPILE-SOURCE`
 with the core; at `XC-END` the compiler adds `fff_latest`, the start-up

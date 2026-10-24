@@ -575,6 +575,9 @@ XC-LIT-STR brf  CONSTANT m-brf
 \ thread, fff_latest and dict_end. XC-LINK-FROM names the newest
 \ assembly dictionary entry, which the first compiled entry links to.
 VARIABLE xc-kernel       0 xc-kernel !
+\ Scripts set xc-bye so the emulator halts at XC-END instead of idling
+\ to its instruction budget; the web tab's rebuild leaves it 0.
+VARIABLE xc-bye          0 xc-bye !
 VARIABLE xc-first-link   0 xc-first-link !
 : XC-KERNEL-BEGIN  1 xc-kernel !  NL marker-begin EMIT-COUNTED NL ;
 : XC-LINK-FROM  ( "label" -- )  XC-READ-TOKEN XC-COPY-COUNTED xc-first-link ! ;
@@ -610,7 +613,8 @@ XC-LIT-STR do_store        CONSTANT label-store
     XC-NEXT-TOKEN
     DUP tok-end XC-SAME? IF
       DROP xc-kernel @ IF XC-KERNEL-END THEN
-      marker-end EMIT-COUNTED NL EXIT
+      marker-end EMIT-COUNTED NL
+      xc-bye @ IF BYE THEN EXIT
     THEN
     DUP tok-colon XC-SAME? IF DROP XC-COMPILE-DEF ELSE
     DUP tok-backslash XC-SAME? IF DROP ['] \ EXECUTE ELSE

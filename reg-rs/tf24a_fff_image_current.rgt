@@ -2,4 +2,4 @@ command = "forth-from-forth/scripts/build-image.sh --check 2>&1"
 timeout = 900
 preprocess = "cat"
 exit_code = 0
-desc = "forth-from-forth/kernel.s is what build-image.sh generates from core/prims-asm.fth and core/*.fth (full rebuild, primitives included)"
+desc = "fixed point: forth-from-forth runs its own cross-compiler on its own sources (prims-asm.fth + core/*.fth) and reproduces its kernel.s exactly"

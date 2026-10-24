@@ -30,22 +30,27 @@ cd "$ROOT"
 # and the primitive registry, then XC-COMPILE-SOURCE followed by the
 # target source and the XC-END sentinel.
 SOURCE="${XC_SOURCE:-$FFF/core/runtime.fth}"
+# Host: forth-from-forth's own kernel, which already holds the core
+# (XC_HOST=forth-on-forthish/kernel.s streams the core tiers in first).
+HOST="${XC_HOST:-$FFF/kernel.s}"
+if [ "$(cd "$(dirname "$HOST")" && pwd)/$(basename "$HOST")" = "$(cd "$FFF" && pwd)/kernel.s" ]; then
+  HOST_CORE=""
+else
+  HOST_CORE="$(cat "$FFF"/core/{runtime,minimal,lowlevel,midlevel,highlevel}.fth)"
+fi
 INPUT="$(
-  cat "$FFF/core/runtime.fth"
-  cat "$FFF/core/minimal.fth"
-  cat "$FFF/core/lowlevel.fth"
-  cat "$FFF/core/midlevel.fth"
-  cat "$FFF/core/highlevel.fth"
+  [ -n "$HOST_CORE" ] && printf '%s\n' "$HOST_CORE"
   cat "$FFF/compiler/xcomp.fth"
   cat "$FFF/core/prims.fth"
 )
+1 xc-bye !
 ${XC_TRACE:+1 xc-trace !}
 XC-COMPILE-SOURCE
 $(cat "$SOURCE")
 XC-END
 "
 
-"$FOF/../scripts/run-kernel.sh" "$FOF/kernel.s" -u "$INPUT" --speed 0 -t 600 -n 3000000000 2>&1 \
+"$FOF/../scripts/run-kernel.sh" "$HOST" -u "$INPUT" --speed 0 -t 600 -n 3000000000 2>&1 \
   | sed -n '/^UART output:/,$p' \
   | sed -n '/^!!BEGIN-KERNEL!!$/,/^!!END-KERNEL!!$/p' \
   | sed '1d;$d' \

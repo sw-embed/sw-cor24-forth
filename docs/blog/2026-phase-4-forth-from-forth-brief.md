@@ -22,9 +22,12 @@ instruction encoder yet.
 **Fixed point (2026-10-24).** The compiler normally runs on forth-on-forthish's
 hand-written kernel. Run instead on forth-from-forth's own kernel, it
 reproduces forth-from-forth's kernel.s exactly, byte for byte of the text.
-The hand-written kernel was only needed to start the chain. Locked by reg-rs
-`tf24a_fff_fixed_point`; reproduce with
-`XC_HOST=forth-from-forth/kernel.s forth-from-forth/scripts/build-image.sh --check`.
+The hand-written kernel was only needed to start the chain. Since then
+the build runs on forth-from-forth's own kernel by default
+(`forth-from-forth/scripts/build-image.sh --check`, reg-rs
+`tf24a_fff_image_current`); `tf24a_fff_bootstrap_root` checks that starting
+again from the hand-written kernel (`XC_HOST=forth-on-forthish/kernel.s`)
+gives the same kernel.s.
 
 ## 2. Numbers
 
@@ -62,9 +65,10 @@ Sizes (source: `kernel-sizes.md`, "Dead code removed (step 7)"):
   lines (the `PRIM: name label` registry, 32 primitives);
   `scripts/build-image.sh` 75 lines (shell plumbing); `scripts/dead-code.py`
   61 lines (a reachability check, not a generator).
-- Build: a full kernel build (primitives and dictionary) takes about 80 s
-  of wall time; a dictionary-only compile for tests about 39 s. Both run
-  the compiler inside the emulator.
+- Build: a full kernel build (primitives and dictionary) does 1.26 G
+  instructions of real work (1.91 G under cor24-emu, whose -u feeds at most
+  one byte per 10,000-instruction batch) and takes about 30 s of wall
+  time; a dictionary-only compile for tests about 7 s.
 - Removed by the reachability pass: 85 blocks, 1,043 lines, including the
   assembly `INTERPRET`, `QUIT`, `NUMBER`, `WORD`, `FIND`, `:`, `;` and `[']`.
 - Tests: 92 golden-output tests (reg-rs) in sw-cor24-forth, all passing,

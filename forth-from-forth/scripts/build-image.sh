@@ -4,8 +4,8 @@
 #   scripts/build-image.sh            regenerate kernel.s
 #   scripts/build-image.sh --check    fail if kernel.s is stale
 #
-# The phase-3 kernel (../forth-on-forthish/kernel.s) runs the cross-compiler
-# in the emulator and prints kernel.s over the UART:
+# The cross-compiler runs in the emulator on forth-from-forth's own kernel
+# (a fixed point; see HOST below) and prints kernel.s over the UART:
 #   1. core/prims-asm.fth, in the assembler vocabulary of compiler/xcomp.fth,
 #      prints the primitive section (start-up code, NEXT/DOCOL, primitives,
 #      UART layer, variables) and names the newest assembly entry;
@@ -22,7 +22,17 @@ set -f
 HERE="$(cd "$(dirname "$0")" && pwd)"
 FFF="$(cd "$HERE/.." && pwd)"
 ROOT="$(cd "$FFF/.." && pwd)"
-HOST="${XC_HOST:-$ROOT/forth-on-forthish/kernel.s}"   # XC_HOST: run the compiler on another kernel
+# The compiler runs on forth-from-forth's own committed kernel, which
+# already holds the core, so nothing but the compiler is streamed in. To
+# restart the chain from the hand-written phase-3 kernel (if kernel.s is
+# ever broken), set XC_HOST=forth-on-forthish/kernel.s: any other host gets
+# the five core tiers streamed in first.
+HOST="${XC_HOST:-$FFF/kernel.s}"
+if [ "$(cd "$(dirname "$HOST")" && pwd)/$(basename "$HOST")" = "$FFF/kernel.s" ]; then
+  HOST_CORE=""
+else
+  HOST_CORE="$(cat "$FFF"/core/{runtime,minimal,lowlevel,midlevel,highlevel}.fth)"
+fi
 OUT="$FFF/kernel.s"
 WORK="$(mktemp -d -t build-image)"; trap 'rm -rf "$WORK"' EXIT
 cd "$ROOT"
@@ -31,8 +41,9 @@ cat "$FFF"/core/{runtime,minimal,lowlevel,midlevel,highlevel}.fth \
   | grep -v -x -e "' QUIT QUIT-VECTOR !" -e "QUIT" > "$WORK/core.fth"
 
 INPUT="$(
-  cat "$FFF"/core/{runtime,minimal,lowlevel,midlevel,highlevel}.fth
+  [ -n "$HOST_CORE" ] && printf '%s\n' "$HOST_CORE"
   cat "$FFF/compiler/xcomp.fth"
+  echo "1 xc-bye !"
   echo "XC-KERNEL-BEGIN"
   cat "$FFF/core/prims.fth"
   cat "$FFF/core/prims-asm.fth"

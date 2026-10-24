@@ -1,0 +1,5 @@
+command = "XC_HOST=forth-on-forthish/kernel.s forth-from-forth/scripts/build-image.sh --check 2>&1"
+timeout = 900
+preprocess = "cat"
+exit_code = 0
+desc = "bootstrap root: starting from the hand-written forth-on-forthish kernel still reproduces forth-from-forth/kernel.s"
