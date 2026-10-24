@@ -122,11 +122,11 @@ pres.addSection({ title: "Intro" });
 {
   const s = pres.addSlide({ masterName: "DARK_TITLE", sectionTitle: "Intro" });
   s.addText("Forth on COR24", { placeholder: "title" });
-  s.addText("Forth kernels for a 24-bit soft CPU: all assembly, Forth-in-Forth, Forth on a Forth-shaped substrate, and a fourth, compiled by Forth, in progress", { placeholder: "body" });
+  s.addText("Four Forth kernels for a 24-bit soft CPU, from all assembly to a dictionary compiled by Forth itself", { placeholder: "body" });
   codeBox(s, 0.6, 3.75, 5.2, 1.1, [": SQUARE  DUP * ;", "  ok", "5 SQUARE .", "25  ok"], 12);
   s.addText("Mike Wright", { x: 0.6, y: 4.95, w: 4.0, h: 0.3, fontSize: 14, bold: true, color: C.background1, margin: 0, isTextBox: true, objectName: "title author" });
   s.addText("2026 October 24  ·sw-embed.github.io/web-sw-cor24-forth", { x: 4.6, y: 4.95, w: 4.8, h: 0.3, fontSize: 11, color: C.accent5, margin: 0, align: "right", valign: "middle", isTextBox: true, objectName: "title footer" });
-  s.addNotes("Deck covers the COR24 target and its ISA limits, the three Forth implementations in sw-cor24-forth, how they compare with other Forths, the demo set in the web UI, and the everyday workflow of defining, listing, running and redefining words.");
+  s.addNotes("Deck covers the COR24 target and its ISA limits, the four Forth implementations in sw-cor24-forth, how they compare with other Forths, the demo set in the web UI, and the everyday workflow of defining, listing, running and redefining words.");
 }
 
 // ============================================================
@@ -136,7 +136,7 @@ pres.addSection({ title: "Intro" });
   const s = content("What this deck covers", "Intro");
   const items = [
     ["1", "The target", "COR24 in one page, and what its ISA takes away from a Forth writer."],
-    ["2", "Three implementations", "forth.s, forth-in-forth and forth-on-forthish: what each keeps in assembly and why. Plus forth.s hosted inside SWTOS."],
+    ["2", "Four implementations", "forth.s, forth-in-forth, forth-on-forthish and forth-from-forth: what each keeps in assembly. Plus forth.s inside SWTOS."],
     ["3", "Choices vs. other Forths", "Threading, cell size, HERE semantics, division, dictionary search."],
     ["4", "The demos", "What each dropdown entry teaches, which tabs run it, and the hardware demos."],
     ["5", "Working with words", "Define, run, list, inspect, redefine and forget, in the web UI and on the CLI."],
@@ -208,7 +208,7 @@ section("The target: COR24", "A 24-bit RISC soft CPU for Lattice MachXO FPGAs (m
 // 6. Shared design
 // ============================================================
 {
-  const s = content("Design shared by all three kernels", "The target");
+  const s = content("Design shared by all four kernels", "The target");
   s.addText("Direct-threaded code: NEXT is 3 instructions, 5 bytes, inlined at the tail of every primitive", { x: 0.5, y: 1.0, w: 4.6, h: 0.5, fontSize: 12.5, bold: true, color: C.text1, margin: 0, isTextBox: true, objectName: "next caption" });
   codeBox(s, 0.5, 1.5, 4.6, 0.95, ["lw  r0, 0(r2)   ; W  = mem[IP]  (fetch CFA)", "add r2, 3       ; IP += one cell", "jmp (r0)        ; run the primitive"], 10.5);
   s.addText("Dictionary entry: a singly linked list, newest first", { x: 0.5, y: 2.6, w: 4.6, h: 0.4, fontSize: 12.5, bold: true, color: C.text1, margin: 0, isTextBox: true, objectName: "dict caption" });
@@ -231,7 +231,7 @@ section("The target: COR24", "A 24-bit RISC soft CPU for Lattice MachXO FPGAs (m
     ["Aspect", "COR24 Forth", "JonesForth", "eForth", "gforth"],
     ["Threading", "DTC, inlined NEXT", "ITC", "ITC or subroutine", "DTC / ITC / token"],
     ["Cell", "24-bit (3 bytes)", "32-bit", "16 / 32-bit", "32 / 64-bit"],
-    ["Kernel source", "asm, down to ~22 prims + Forth", "x86 asm + Forth", "~30 prims + Forth", "C + Forth"],
+    ["Kernel source", "asm prims + Forth; tab 4 compiled by Forth", "x86 asm + Forth", "~30 prims + Forth", "C + Forth"],
     ["Standard", "pragmatic subset", "subset", "mostly ANS", "Forth-2012"],
     ["HERE", "variable (HERE @)", "variable (HERE @)", "value", "value"],
     ["Division", "repeated subtraction", "hardware idiv", "Forth-coded UM/MOD", "C / hardware"],
@@ -246,33 +246,34 @@ section("The target: COR24", "A 24-bit RISC soft CPU for Lattice MachXO FPGAs (m
 // 8. Section: implementations
 // ============================================================
 pres.addSection({ title: "Implementations" });
-section("Three implementations", "in  ·  in-ish  ·  from: how much of the kernel is Forth", "Implementations");
+section("Four implementations", "in  ·  in-ish  ·  from: how much of the kernel is Forth", "Implementations");
 
 // ============================================================
-// 9. One language, three kernels
+// 9. One language, four kernels
 // ============================================================
 {
-  const s = content("One language, three kernels (and a fourth under way)", "Implementations");
+  const s = content("One language, four kernels", "Implementations");
   const cols = [
-    ["1", "forth.s", "All-assembly kernel", C.accent1, ["3,498", "lines of asm"], ["0", "lines of Forth core"], ["~65", "primitives"], "Tab 1: the debugger. Canonical kernel for the FPGA board and the reg-rs golden tests."],
-    ["2", "forth-in-forth", "Forth runs in a slimmed asm host", C.accent2, ["2,720", "lines of asm"], ["276", "lines in 4 core tiers"], ["50", "primitives, 61 colon words"], "Tab 2: self-hosting REPL. IF, ., WORDS, SEE are Forth."],
-    ["3", "forth-on-forthish", "Forth on a Forth-ish substrate", C.accent3, ["2,659", "lines of asm (see note)"], ["497", "lines in 5 core tiers"], ["~22", "irreducible primitives, 82 colon words"], "Tab 3 (default): :, WORD, FIND, NUMBER, INTERPRET, QUIT are Forth."],
+    ["1", "forth.s", "All-assembly kernel", C.accent1, ["3,498", "lines of asm"], ["0", "lines of Forth core"], ["~65", "asm primitives"], "Tab 1: the debugger. Runs on the FPGA board; reg-rs golden tests."],
+    ["2", "forth-in-forth", "Forth in a slimmed asm host", C.accent2, ["2,720", "lines of asm"], ["276", "lines in 4 core tiers"], ["50", "asm primitives"], "Tab 2: IF, ., WORDS and SEE are Forth, loaded at boot."],
+    ["3", "forth-on-forthish", "Forth on a Forth-ish substrate", C.accent3, ["2,659", "lines of asm"], ["497", "lines in 5 core tiers"], ["~22", "irreducible primitives"], "Tab 3: :, WORD, FIND, NUMBER, INTERPRET, QUIT are Forth."],
+    ["4", "forth-from-forth", "Dictionary compiled by Forth", C.accent6, ["83", "definitions cross-compiled"], ["4,060", "lines of generated kernel.s"], ["0.7 M", "instructions to first output"], "Tab 4 (default): nothing streams at boot; tab 3 needs 150 M."],
   ];
   cols.forEach((c, i) => {
-    const x = 0.5 + i * 3.05, w = 2.9;
-    s.addShape(RR, { x, y: 1.0, w, h: 3.55, fill: { color: C.background2 }, line: { color: C.background2, width: 0 }, rectRadius: 0.1, objectName: name("kernel card") });
-    s.addShape(EL, { x: x + 0.16, y: 1.14, w: 0.4, h: 0.4, fill: { color: c[3] }, line: { color: c[3], width: 0 }, objectName: name("kernel icon") });
-    s.addText(c[0], { x: x + 0.16, y: 1.14, w: 0.4, h: 0.4, fontSize: 14, bold: true, color: C.background1, align: "center", valign: "middle", margin: 0, isTextBox: true, objectName: name("kernel num") });
-    s.addText(c[1], { x: x + 0.66, y: 1.1, w: w - 0.8, h: 0.3, fontSize: 14, bold: true, fontFace: MONO, color: C.text1, margin: 0, isTextBox: true, objectName: name("kernel name") });
-    s.addText(c[2], { x: x + 0.66, y: 1.38, w: w - 0.8, h: 0.3, fontSize: 10.5, italic: true, color: C.text1, margin: 0, isTextBox: true, objectName: name("kernel tag") });
+    const x = 0.5 + i * 2.28, w = 2.16;
+    s.addShape(RR, { x, y: 1.0, w, h: 3.7, fill: { color: C.background2 }, line: { color: C.background2, width: 0 }, rectRadius: 0.1, objectName: name("kernel card") });
+    s.addShape(EL, { x: x + 0.14, y: 1.12, w: 0.36, h: 0.36, fill: { color: c[3] }, line: { color: c[3], width: 0 }, objectName: name("kernel icon") });
+    s.addText(c[0], { x: x + 0.14, y: 1.12, w: 0.36, h: 0.36, fontSize: 13, bold: true, color: C.background1, align: "center", valign: "middle", margin: 0, isTextBox: true, objectName: name("kernel num") });
+    s.addText(c[1], { x: x + 0.58, y: 1.1, w: w - 0.66, h: 0.4, fontSize: 12.5, bold: true, color: C.text1, margin: 0, valign: "middle", isTextBox: true, objectName: name("kernel name") });
+    s.addText(c[2], { x: x + 0.14, y: 1.55, w: w - 0.28, h: 0.3, fontSize: 10, italic: true, color: C.text1, margin: 0, isTextBox: true, objectName: name("kernel tag") });
     [c[4], c[5], c[6]].forEach((st, j) => {
-      const y = 1.8 + j * 0.62;
-      s.addText(st[0], { x: x + 0.16, y, w: 1.1, h: 0.5, fontSize: 20, bold: true, color: c[3], margin: 0, valign: "middle", isTextBox: true, objectName: name("kernel stat") });
-      s.addText(st[1], { x: x + 1.28, y, w: w - 1.44, h: 0.5, fontSize: 10.5, color: C.text1, margin: 0, valign: "middle", isTextBox: true, objectName: name("kernel stat label") });
+      const y = 1.95 + j * 0.62;
+      s.addText(st[0], { x: x + 0.14, y, w: w - 0.28, h: 0.3, fontSize: 17, bold: true, color: c[3], margin: 0, valign: "middle", isTextBox: true, objectName: name("kernel stat") });
+      s.addText(st[1], { x: x + 0.14, y: y + 0.3, w: w - 0.28, h: 0.3, fontSize: 10, color: C.text1, margin: 0, valign: "top", isTextBox: true, objectName: name("kernel stat label") });
     });
-    s.addText(c[7], { x: x + 0.16, y: 3.7, w: w - 0.32, h: 0.78, fontSize: 10.5, color: C.text1, margin: 0, valign: "top", isTextBox: true, objectName: name("kernel blurb") });
+    s.addText(c[7], { x: x + 0.14, y: 3.85, w: w - 0.28, h: 0.75, fontSize: 10, color: C.text1, margin: 0, valign: "top", isTextBox: true, objectName: name("kernel blurb") });
   });
-  s.addText("4  forth-from-forth (phase 4, work in progress, two slides on): a cross-compiler written in Forth emits the kernel .s, so no hand-written assembly remains. Retargeting becomes a new asm-emit module.", { x: 0.5, y: 4.7, w: 9.0, h: 0.45, fontSize: 11, color: C.accent2, margin: 0, isTextBox: true, objectName: "phase 4 note" });
+  s.addText("Tab 4's primitives still come from tab 3's hand-written assembly; the dictionary on top of them is generated. Emitting the primitives from Forth too is the next step.", { x: 0.5, y: 4.8, w: 9.0, h: 0.4, fontSize: 10.5, color: C.accent2, margin: 0, isTextBox: true, objectName: "phase 4 note" });
 }
 
 // ============================================================
@@ -329,7 +330,7 @@ section("Three implementations", "in  ·  in-ish  ·  from: how much of the kern
     "Four layer words: MENU lists the 18 vendored examples, n LOAD runs one as if typed, n LIST prints it, RESET forgets everything. Words are case-insensitive.",
     "It is a resident program like any other: its data stack is the process stack (256 cells), and a Forth loop that never yields (example 21, HOG) is preempted by the clock and can be killed from the shell. On the bare kernel that loop needs a reset.",
     "Nothing in the core changed to make this work. The split into forth-core.s plus a layer was done so SWTOS could own I/O, stacks and exit while the Forth stays byte-identical.",
-    "Same source commit as tab 1, so the three web tabs and the SWTOS pane run the same Forth; only the host differs.",
+    "Same source commit as tab 1, so the web debugger tab and the SWTOS pane run the same Forth; only the host differs.",
   ], 11);
 }
 
@@ -393,43 +394,51 @@ section("Three implementations", "in  ·  in-ish  ·  from: how much of the kern
   bullets(s, 5.5, 2.7, 4.0, 2.4, [
     "Even : and ; are colon definitions. The only help is ,DOCOL, which copies the COR24 opcode bytes Forth cannot encode itself.",
     "WORD, FIND, NUMBER, INTERPRET and QUIT are Forth. After the last core line installs QUIT-VECTOR, every prompt line runs through Forth code.",
-    "Honest number: kernel.s is still 2,659 lines. The asm bootstrap must compile runtime.fth before Forth : exists, so the asm WORD / FIND / NUMBER bodies stay alive. Deleting them needs a precompiled image: that is phase 4.",
+    "kernel.s stays at 2,659 lines here: the asm bootstrap must compile runtime.fth before the Forth : exists, so the asm WORD, FIND and NUMBER stay. Tab 4 removes them by compiling the core ahead of time.",
     "Cost: Fibonacci needs an 800 M instruction budget; stack ops via SP@ are several times slower than push / pop.",
   ], 10.5);
 }
 
 // ============================================================
-// 12b. forth-from-forth: work in progress
+// 12b. forth-from-forth
 // ============================================================
 {
-  const s = content("forth-from-forth: the kernel as a build artifact (WIP)", "Implementations");
-  // pipeline
+  const s = content("forth-from-forth (tab 4): compiled by Forth", "Implementations");
   const y = 1.05, h = 0.62;
-  flowBox(s, 0.5, y, 1.9, h, "xcomp.fth + prims.fth\n(the compiler, in Forth)", C.accent1, C.background1, 9.5);
+  flowBox(s, 0.5, y, 1.9, h, "xcomp.fth + prims.fth\n(the compiler, in Forth)", C.accent1, C.background1, 10);
   arrow(s, 2.45, y + 0.16, 0.25, 0.3);
-  flowBox(s, 2.75, y, 1.75, h, "core/*.fth\nread as source", C.accent2, C.background1, 9.5);
+  flowBox(s, 2.75, y, 1.75, h, "core/*.fth\nread as source", C.accent2, C.background1, 10);
   arrow(s, 4.55, y + 0.16, 0.25, 0.3);
-  flowBox(s, 4.85, y, 1.9, h, "runs on the phase-3 REPL,\nasm text out the UART", C.accent2, C.background1, 9.5);
+  flowBox(s, 4.85, y, 1.9, h, "runs on tab 3's kernel,\nasm text out the UART", C.accent2, C.background1, 10);
   arrow(s, 6.8, y + 0.16, 0.25, 0.3);
-  flowBox(s, 7.1, y, 2.4, h, "kernel.s → cor24-asm → image boot,\nno UART bootstrap", C.text1, C.background1, 9.5);
-  codeBox(s, 0.5, 1.85, 4.4, 1.5, [
-    "XC-COMPILE-TEST : FOO SP@ @ ;", "fff_e_1:", ".word 0", ".byte 3", ".byte 70   ; F O O ...", "fff_c_1:", ".word do_docol_far   ; far CFA prelude", ".word do_sp_fetch  .word do_fetch  .word do_exit",
-  ], 9);
-  s.addText("Status on 2026-10-23", { x: 5.2, y: 1.85, w: 4.3, h: 0.3, fontSize: 12.5, bold: true, color: C.text1, margin: 0, isTextBox: true, objectName: "fff status caption" });
+  flowBox(s, 7.1, y, 2.4, h, "kernel.s = primitives + dictionary;\nboots straight into QUIT", C.text1, C.background1, 10);
+  s.addText("What the compiler emits for : R@ RP@ 3 + @ ;", { x: 0.5, y: 1.85, w: 4.4, h: 0.3, fontSize: 11, bold: true, color: C.text1, margin: 0, isTextBox: true, objectName: "emit caption" });
+  codeBox(s, 0.5, 2.18, 4.4, 2.0, [
+    "fff_e5_R_64:          ; header",
+    ".word fff_e4_SWAP     ; link",
+    ".byte 2               ; length",
+    ".byte 82, 64          ; \"R@\"",
+    "fff_c5_R_64:          ; CFA: far DOCOL",
+    ".byte 125, 41 / .word do_docol_far / .byte 38",
+    ".word do_rp_fetch     ; body",
+    ".word do_lit, 3, do_plus, do_fetch, do_exit",
+  ], 9.5);
+  s.addText("Retargeting to another CPU becomes a new assembly emitter, not a new kernel.", { x: 0.5, y: 4.3, w: 4.4, h: 0.5, fontSize: 10.5, italic: true, color: C.accent2, margin: 0, isTextBox: true, objectName: "fff why" });
+  s.addText("Shipped 2026-10-23 / 24", { x: 5.2, y: 1.85, w: 4.3, h: 0.3, fontSize: 12.5, bold: true, color: C.text1, margin: 0, isTextBox: true, objectName: "fff status caption" });
   bullets(s, 5.2, 2.17, 4.3, 3.0, [
-    "Works: the compiler emits the whole runtime.fth tier (DUP through :, ;) and a self-test image runs that dictionary.",
-    "Was stuck since April: compiling a definition from source died right after the begin marker. Found today: the phase-3 Forth NUMBER read its sign byte from the wrong cell, so every -1 in the compiler became a ? and a missing stack item. With that fixed, : FOO SP@ @ ; compiles from source (left).",
-    "Not yet: the other four tiers, the primitive declarations, an _start that boots from the image, deleting the asm bootstrap. kernel.s is still a copy of forth-on-forthish.",
-    "Tracked as saga phase-4-tab-4: eight steps ending in a fourth web tab, a blog brief and this deck updated.",
+    "All five core tiers compile from source: 83 definitions, each identical in SEE form to what tab 3 compiles at boot, and they run when linked.",
+    "Boot: first output after 0.71 M instructions against 149.56 M for tab 3, which streams and compiles its core first.",
+    "A reachability pass removes the asm bootstrap (INTERPRET, QUIT, NUMBER, WORD, FIND, : ; [']): 9,450 → 8,168 bytes.",
+    "Unblocked by a one-cell bug: tab 3's Forth NUMBER read the minus sign from the wrong cell, so every -1 in the compiler vanished.",
+    "Next: the primitives themselves from core/prims.fth.",
   ], 10);
-  s.addText("Why bother: no hand-written assembly left; retargeting to another CPU means a new asm-emit module, not a new kernel. The April blog posts (Rabbit-hole parts 2 to 5) planned this: FIND's hash goes away, forward references become linker-style fixups.", { x: 0.5, y: 3.5, w: 4.4, h: 1.6, fontSize: 10.5, italic: true, color: C.accent2, margin: 0, isTextBox: true, objectName: "fff why" });
 }
 
 // ============================================================
 // 13. Boot flow
 // ============================================================
 {
-  const s = content("Boot: one kernel binary, then a stream of text", "Implementations");
+  const s = content("Boot: a stream of core text, or none at all", "Implementations");
   const y = 1.15, h = 0.7;
   flowBox(s, 0.5, y, 1.55, h, "cor24-asm\nkernel.s → .lgo", C.text1, C.background1, 10.5);
   arrow(s, 2.1, y + 0.2);
@@ -440,7 +449,7 @@ section("Three implementations", "in  ·  in-ish  ·  from: how much of the kern
   flowBox(s, 6.55, y, 1.3, h, "“ok” prompt", C.accent1, C.background1, 11);
   arrow(s, 7.9, y + 0.2);
   flowBox(s, 8.25, y, 1.25, h, "demo, upload\nor typed line", C.accent6, C.background1, 10.5);
-  s.addText("Tab 1 sends no core files and is interactive at once. Tab 2 streams four tiers, tab 3 five. The same bytes work on the CLI:", { x: 0.5, y: 2.05, w: 9.0, h: 0.35, fontSize: 11.5, color: C.text1, margin: 0, isTextBox: true, objectName: "boot note" });
+  s.addText("Tab 1 has no core files; tab 2 streams four tiers, tab 3 five; tab 4 none, its core is compiled in. CLI:", { x: 0.5, y: 2.05, w: 9.0, h: 0.35, fontSize: 11.5, color: C.text1, margin: 0, isTextBox: true, objectName: "boot note" });
   codeBox(s, 0.5, 2.42, 9.0, 0.75, [
     "cor24-asm forth-on-forthish/kernel.s -o kernel.lgo",
     "cor24-emu --lgo kernel.lgo --speed 0 -n 800000000 \\",
@@ -448,31 +457,31 @@ section("Three implementations", "in  ·  in-ish  ·  from: how much of the kern
   ], 10.5);
   bullets(s, 0.5, 3.35, 4.4, 1.8, [
     "In the browser a pump hands bytes to the UART only while the PC sits in one of the kernel's known poll loops, in sub-batches of 2 k instructions, then lets compile work run in 50 k batches.",
-    "Those poll-loop labels are the one thing a new kernel must register; a headless test boots all three kernels through the pump to catch a missing one.",
+    "Those poll-loop labels are the one thing a new kernel must register; a headless test boots all four kernels through the pump, with a watchdog, to catch a missing one.",
   ], 10.5);
   table(s, [
-    ["Fibonacci demo", "Instructions", "Why"],
-    ["forth.s", "~40 M", "everything native"],
-    ["forth-in-forth", "~120 M", "IF / UNTIL compile as threaded code"],
-    ["forth-on-forthish", "~800 M budget", "WORD / FIND / NUMBER and stack ops in Forth"],
-  ], 5.2, 3.35, 4.3, [1.5, 1.1, 1.7], 10, 0.3);
+    ["Kernel", "First output at", "Core arrives"],
+    ["forth.s", "80 k", "all assembly"],
+    ["forth-from-forth", "0.71 M", "compiled into the image"],
+    ["forth-in-forth", "87 M", "4 tiers over the UART"],
+    ["forth-on-forthish", "150 M", "5 tiers over the UART"],
+  ], 5.2, 3.35, 4.3, [1.55, 1.15, 1.6], 10, 0.3);
 }
 
 // ============================================================
 // 14. Trade-offs
 // ============================================================
 {
-  const s = content("Trade-offs between the three", "Implementations");
+  const s = content("Trade-offs between the four", "Implementations");
   table(s, [
-    ["", "forth.s", "forth-in-forth", "forth-on-forthish"],
-    ["Speed", "fastest; compile and run native", "runtime same; compile ~3× slower", "everything through Forth; ~20× the budget"],
-    ["Assembly to maintain", "~3,500 lines, every word", "~2,700 lines, 50 primitives", "~2,650 lines, but only ~22 matter after boot"],
-    ["What SEE can show", "no SEE", "IF, ., WORDS as Forth", "also :, WORD, FIND, INTERPRET"],
-    ["Retarget to a new CPU", "rewrite everything", "rewrite 50 primitives + bootstrap", "rewrite ~22 primitives + bootstrap; outer interpreter is portable Forth"],
-    ["Extra vocabulary", "FORGET, :NONAME", "SEE, DUMP-ALL, PICK, ROT", "NAND, SP!, RP@, RP!, WORD-BUFFER"],
-    ["Bootstrap risk", "none", "tier order matters", "chicken-and-egg: asm loop must compile Forth : first"],
-    ["Best for", "the board, debugging, golden tests", "learning how Forth defines itself", "porting; seeing the whole interpreter as Forth"],
-  ], 0.5, 1.0, 9.0, [1.7, 2.3, 2.4, 2.6], 10, 0.42);
+    ["", "forth.s", "forth-in-forth", "forth-on-forthish", "forth-from-forth"],
+    ["Speed", "fastest; native compile and run", "runtime same; compile ~3× slower", "everything through Forth", "as tab 3, but boot ~200× less work"],
+    ["Assembly to maintain", "~3,500 lines, every word", "~2,700 lines, 50 primitives", "~2,650 lines; ~22 matter after boot", "the primitives only; dictionary generated"],
+    ["What SEE can show", "no SEE", "IF, ., WORDS as Forth", "also :, WORD, FIND, INTERPRET", "same, all compiled ahead of time"],
+    ["Retarget to a new CPU", "rewrite everything", "50 primitives + bootstrap", "~22 primitives + bootstrap", "new asm emitter + ~22 primitives"],
+    ["Bootstrap risk", "none", "tier order matters", "asm loop must compile Forth : first", "none at run time; the compiler carries it"],
+    ["Best for", "the board, debugging, golden tests", "learning how Forth defines itself", "seeing the interpreter as Forth", "fast start; the self-hosting story end to end"],
+  ], 0.5, 1.0, 9.0, [1.4, 1.85, 1.85, 1.95, 1.95], 10, 0.5);
 }
 
 // ============================================================
@@ -488,21 +497,21 @@ section("The demos", "The dropdown in every tab, backed by sw-cor24-forth/exampl
   const s = content("Language demos: what each one teaches", "Demos");
   table(s, [
     ["Demo", "File", "Teaches", "Tabs"],
-    ["Smoke Test", "00", ".S, arithmetic, HEX, WORDS: interpret mode only", "1 2 3"],
-    ["Colon Definitions", "01", "TWO, SQUARE, CUBE: compile mode and nesting", "1 2 3"],
-    ["Math Words", "03", "NEGATE, DOUBLE, TRIPLE, *", "1 2 3"],
-    ["ASCII Stars", "04", "EMIT patterns from composed words", "1 2 3"],
-    ["Comments", "06", "\\ line comments and ( ) inline comments", "1 2 3"],
-    ["Division & Modulo", "07", "/MOD, then / and MOD built from it", "1 2 3"],
-    ["IF THEN  /  IF ELSE", "08 09", "conditional execution inside a definition", "1 2 3"],
-    ["Loop", "10", "BEGIN UNTIL counting up and down", "1 2 3"],
-    ["FizzBuzz", "11", "nested IF ELSE inside BEGIN UNTIL, 1 to 20", "1 2 3"],
-    ["Fibonacci (manual / looped)", "14", "defines its own NIP TUCK 1+ 1-; FIB(0)..FIB(10) or ..FIB(20)", "1 2 3"],
-    ["AGAIN  /  WHILE REPEAT", "15 16", "BEGIN AGAIN with IF EXIT; test-in-middle TRIANGLE sum", "2 3"],
-    ["CONSTANT  /  VARIABLE", "17 18", "named values; a COUNTER cell with BUMP / RESET / SHOW", "2 3"],
-    ["DO LOOP", "19", "DO ?DO I UNLOOP, factorial, early EXIT", "2 3"],
-    ["SEE (all words)", "inline", "defines SQUARE and CUBE, then DUMP-ALL decompiles every word", "2 3"],
-    ["Self Test", "12", "every kernel word; stack empty at the end; intentional ? ? errors", "1 2 3"],
+    ["Smoke Test", "00", ".S, arithmetic, HEX, WORDS: interpret mode only", "1 2 3 4"],
+    ["Colon Definitions", "01", "TWO, SQUARE, CUBE: compile mode and nesting", "1 2 3 4"],
+    ["Math Words", "03", "NEGATE, DOUBLE, TRIPLE, *", "1 2 3 4"],
+    ["ASCII Stars", "04", "EMIT patterns from composed words", "1 2 3 4"],
+    ["Comments", "06", "\\ line comments and ( ) inline comments", "1 2 3 4"],
+    ["Division & Modulo", "07", "/MOD, then / and MOD built from it", "1 2 3 4"],
+    ["IF THEN  /  IF ELSE", "08 09", "conditional execution inside a definition", "1 2 3 4"],
+    ["Loop", "10", "BEGIN UNTIL counting up and down", "1 2 3 4"],
+    ["FizzBuzz", "11", "nested IF ELSE inside BEGIN UNTIL, 1 to 20", "1 2 3 4"],
+    ["Fibonacci (manual / looped)", "14", "defines its own NIP TUCK 1+ 1-; FIB(0)..FIB(10) or ..FIB(20)", "1 2 3 4"],
+    ["AGAIN  /  WHILE REPEAT", "15 16", "BEGIN AGAIN with IF EXIT; test-in-middle TRIANGLE sum", "2 3 4"],
+    ["CONSTANT  /  VARIABLE", "17 18", "named values; a COUNTER cell with BUMP / RESET / SHOW", "2 3 4"],
+    ["DO LOOP", "19", "DO ?DO I UNLOOP, factorial, early EXIT", "2 3 4"],
+    ["SEE (all words)", "inline", "defines SQUARE and CUBE, then DUMP-ALL decompiles every word", "2 3 4"],
+    ["Self Test", "12", "every kernel word; stack empty at the end; intentional ? ? errors", "1 2 3 4"],
   ], 0.5, 0.98, 9.0, [2.1, 0.7, 5.4, 0.8], 9, 0.235);
   s.addText("Also in examples/, upload as .fth: 20-redefine (shadowing, FORGET), 21-hog (never yields), 22-factorial (recursion), 23-bases.", { x: 0.5, y: 4.95, w: 9.0, h: 0.25, fontSize: 10, italic: true, color: C.accent2, margin: 0, isTextBox: true, objectName: "extra examples" });
 }
@@ -565,10 +574,10 @@ pres.addSection({ title: "Working with words" });
 {
   const s = content("Known quirks and open items", "Working with words");
   const rows = [
-    ["!", "Fixed today: forth-on-forthish rejected negative literals", "Its Forth NUMBER read the minus sign from the wrong stack cell, so -1 printed ? and left the stack short. Fixed 2026-10-23 in core/highlevel.fth; the tab 3 demos it broke (CONSTANT, DO LOOP, IF THEN, IF ELSE, Self Test) return with the next web build.", C.accent6],
+    ["!", "2SWAP and 2OVER are wrong on tabs 2 to 4", "1 2 3 4 2SWAP leaves 2 1 4 3, not 3 4 1 2. Found while writing the cross-compiler, which avoids them; not fixed yet. Also: . prints -8388608 as -0.", C.accent3],
     ["0", "LED! and SW? are raw active-low bits", "0 LED! lights D2 and SW? returns 0 while pressed. The Help text still says non-zero on and -1 pressed; one of the two should change.", C.accent1],
-    ["F", "FORGET exists only on forth.s", "Tabs 2 and 3 redefine by shadowing; reclaiming dictionary space means Reset.", C.accent2],
-    ["T", "Test loose ends", "The 83-test reg-rs suite passes, but the 600 M-instruction stack-leak test can time out under --parallel and passes alone. The web help doc test lists 12 kernel words with no reference entry.", C.accent4],
+    ["F", "FORGET exists only on forth.s", "Tabs 2, 3 and 4 redefine by shadowing; reclaiming dictionary space means Reset.", C.accent2],
+    ["S", "Tab 3 starts with a stray stack cell", "Its asm bootstrap prints ? ? ? while loading the core and leaves 3051 behind, so .S shows <4> for three items. Tab 4 has no bootstrap and starts clean.", C.accent4],
   ];
   rows.forEach((r, i) => {
     const y = 1.0 + i * 1.02;
@@ -585,7 +594,7 @@ pres.addSection({ title: "Working with words" });
 {
   const s = pres.addSlide({ masterName: "DARK_TITLE", sectionTitle: "Working with words" });
   s.addText("Try it", { placeholder: "title" });
-  s.addText("sw-embed.github.io/web-sw-cor24-forth (three kernels, press ? for the guide)  ·  swtos.softwarewrighter.com/forth/ (forth.s as an SWTOS pane: bg forth)", { placeholder: "body" });
+  s.addText("sw-embed.github.io/web-sw-cor24-forth (four kernels, tab 4 by default; ? for the guide)  ·  swtos.softwarewrighter.com/forth/ (forth.s as an SWTOS pane: bg forth)", { placeholder: "body" });
   s.addText("Repositories, all under github.com/sw-embed", { x: 0.6, y: 3.75, w: 8.8, h: 0.3, fontSize: 11, bold: true, color: C.accent5, margin: 0, isTextBox: true, objectName: "repos caption" });
   const links = [
     ["Web UI", "web-sw-cor24-forth"],
