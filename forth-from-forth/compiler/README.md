@@ -5,37 +5,67 @@ A Forth-to-COR24-assembler cross-compiler, written in Forth.
 ## Usage
 
 ```
-scripts/build-kernel.sh      # regenerate forth-from-forth/kernel.s
+scripts/build-kernel.sh                     # core/runtime.fth -> compiler/out/runtime-dict.s
+XC_SOURCE=file.fth XC_OUT=out.s scripts/build-kernel.sh   # any source, any output
+XC_TRACE=1 scripts/build-kernel.sh          # also write each token and the stack
+                                            # depth as ; comments in the output
+scripts/test-kernel.sh                      # build, then run the emitted dict in
+                                            # selftest-scaffold.s
 ```
 
-The script cats `compiler/xcomp.fth`, `core/prims.fth`, the five
-`core/*.fth` tiers, and a trailing `COMPILE-KERNEL` invocation
-into `scripts/run-kernel.sh forth-on-forthish/kernel.s --terminal`. The
-phase-3 Forth REPL reads xcomp.fth (which defines the alternate
-compilation vocabulary), then walks the prims + core sources
-through that vocabulary, EMITting COR24 assembler text to UART.
-A `sed` filter strips everything outside the
-`!!BEGIN-KERNEL!!` / `!!END-KERNEL!!` markers and redirects to
-`forth-from-forth/kernel.s`.
+## Pipeline
 
-## Why Forth?
+`build-kernel.sh` boots the phase-3 forth-on-forthish kernel in the emulator
+and sends it, over the UART:
 
-Because the project is called "forth-from-forth". The kernel is
-Forth running on Forth-emitted asm; the compiler that produced
-that asm is itself Forth. No Python, no C, no Rust at any step.
+1. the five `core/*.fth` tiers, so the host Forth has its full vocabulary;
+2. `compiler/xcomp.fth`, the compiler;
+3. `core/prims.fth`, one `PRIM: <name> <asm-label>` line per primitive;
+4. `XC-COMPILE-SOURCE`, the target source, and the sentinel `XC-END`.
 
-See `../docs/design.md` for the full rationale and architecture.
+`XC-COMPILE-SOURCE` reads the source a token at a time. For each `:` it reads
+the name, registers it (so later definitions, and the definition itself, can
+call it), collects the body up to `;`, reads one more token to see whether it
+is `IMMEDIATE`, and only then emits the entry. The header byte is emitted last
+because the assembler has no equates to patch it afterwards. `\` and `(`
+comments are skipped, numbers (including negative ones) become `LIT n`, and
+`['] X` becomes `LIT <X's label>`. A token it cannot resolve is emitted as a
+`; ? TOKEN` comment so the build shows it.
 
-## Files
+Each entry looks like this, for `: R@ RP@ 3 + @ ;`:
 
-- `xcomp.fth` — the cross-compiler proper. Defines `PRIM:`,
-  `COLON:` / `;COLON`, `VARIABLE:`, `CONSTANT:`, and IMMEDIATE
-  control-flow emitters (`IF:`, `THEN:`, `BEGIN:`, `AGAIN:`,
-  `UNTIL:`, `WHILE:`, `REPEAT:`). Each emits COR24 assembler
-  text to UART via `EMIT` / `TYPE`.
-- `../core/prims.fth` — per-primitive declarations consumed by
-  xcomp's `PRIM:` to emit the asm primitive section.
-- `../scripts/build-kernel.sh` — the one-line shell wrapper.
+```
+fff_e5_R_64:            ; header: link, flags_len, name
+.word fff_e4_SWAP
+.byte 2
+.byte 82
+.byte 64
+fff_c5_R_64:            ; CFA: push r0; la r0,do_docol_far; jmp (r0)
+.byte 125
+.byte 41
+.word do_docol_far
+.byte 38
+.word do_rp_fetch       ; body
+.word do_lit
+.word 3
+.word do_plus
+.word do_fetch
+.word do_exit
+```
 
-Step 002 ships xcomp.fth as a stub. Step 003 starts filling it
-in; step 005 completes it for all tiers.
+Labels are `fff_c<n>_<NAME>` and `fff_e<n>_<NAME>`; letters and digits are
+kept, anything else becomes `_<code>` (`R@` is `R_64`, `-` is `_45`).
+
+## Not yet
+
+Control flow (`IF`, `BEGIN`, `DO` and friends need branch offsets),
+`CONSTANT`/`VARIABLE`, the primitive bodies themselves, and booting a kernel
+from the emitted image. See `../docs/status.md`.
+
+## Tests
+
+- `reg-rs/tf24a_fff_selftest` — runs the emitted runtime.fth dictionary.
+- `reg-rs/tf24a_fff_xc_compile_test` — compiles `tests/features.fth`.
+
+Never put a backslash followed by n, r, t, x or 0 in any file sent through
+`cor24-emu -u`, comments included: the emulator turns it into a control byte.

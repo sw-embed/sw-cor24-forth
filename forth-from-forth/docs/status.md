@@ -11,10 +11,9 @@ superseded by the current saga.
 
 | Piece | State |
 |---|---|
-| Cross-compiler `compiler/xcomp.fth` | Emits the whole `runtime.fth` tier from a hand-listed sequence (`COMPILE-RUNTIME`); self-test image runs it (`scripts/test-kernel.sh`). |
-| Source-driven parser | Works for one colon definition (`XC-COMPILE-TEST`) since the phase-3 NUMBER fix of 2026-10-23. See `parser-debug-notes.md`, "Resolution". |
+| Cross-compiler `compiler/xcomp.fth` | Compiles `runtime.fth` from source (`XC-COMPILE-SOURCE`): comments, literals, `[']`, `IMMEDIATE`. Output is byte-identical to the April hand-listed emitters, which are gone. Self-test image runs it. |
+| Primitive registry `core/prims.fth` | Names and labels of the 20 primitives runtime.fth uses; no asm bodies yet. |
 | Other four core tiers | Not compiled yet (saga step 003). |
-| `core/prims.fth` primitive declarations | Stub (saga step 004). |
 | Image boot, no UART bootstrap | Not started (saga step 004). |
 | `kernel.s` | Still a copy of `../forth-on-forthish/kernel.s`. |
 | Web tab 4 | Not started (saga step 006). |
@@ -22,7 +21,7 @@ superseded by the current saga.
 ## Saga phase-4-tab-4
 
 1. parser-integration-fix — done 2026-10-23 (negative-literal NUMBER bug)
-2. compile-runtime-from-source
+2. compile-runtime-from-source — done 2026-10-23
 3. compile-full-core
 4. prims-and-image-boot
 5. delete-bootstrap-and-rebaseline
