@@ -1,4 +1,4 @@
-number = 10
+number = 11
 slug = "emit-primitives-from-forth"
 status = "pending"
 description = "Emit the primitives from Forth too, so forth-from-forth/kernel.s contains no ..."
