@@ -1,8 +1,5 @@
-command = """
-scripts/run-kernel.sh forth-on-forthish/kernel.s -u "$(cat forth-from-forth/core/runtime.fth forth-from-forth/core/minimal.fth forth-from-forth/core/lowlevel.fth forth-from-forth/core/midlevel.fth forth-from-forth/core/highlevel.fth forth-from-forth/compiler/xcomp.fth)
-XC-COMPILE-TEST : FOO SP@ @ ;
-" --speed 0 -n 900000000 2>&1"""
+command = "out=$(mktemp) && XC_SOURCE=forth-from-forth/compiler/tests/features.fth XC_OUT=$out forth-from-forth/scripts/build-kernel.sh >/dev/null 2>&1; cat $out; rm -f $out"
 timeout = 600
-preprocess = "sed -n '/^!!BEGIN-KERNEL!!/,/^!!END-KERNEL!!/p' || true"
+preprocess = "cat"
 exit_code = 0
-desc = "forth-from-forth cross-compiler compiles one colon definition from source"
+desc = "cross-compiler features: comments, literals incl. negative, ['], IMMEDIATE, self-reference, name mangling, unresolved token reported"

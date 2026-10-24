@@ -165,11 +165,6 @@ STR: label-nand  7 C,
 \ Naming convention: fff_entry_<NAME> for dict header,
 \                    fff_cfa_<NAME> for CFA start (body = PFA).
 
-\ "fff_cfa_DUP" — 11 chars
-STR: fff-cfa-dup  11 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  68 C, 85 C, 80 C,
-
 \ ============================================================
 \ Additional primitive labels needed for - : ; defs
 \ ============================================================
@@ -281,33 +276,10 @@ VARIABLE xc-symbols
 
 \ Primitive names — what appears in .fth source.
 
-\ "SP@" — 3 chars
-STR: name-sp-fetch  3 C,  83 C, 80 C, 64 C,
-
-\ "@" — 1 char
-STR: name-fetch     1 C,  64 C,
-
-\ "+" — 1 char
-STR: name-plus      1 C,  43 C,
-
-\ "NAND" — 4 chars
-STR: name-nand      4 C,  78 C, 65 C, 78 C, 68 C,
-
-\ "DUP" — 3 chars (register for lookup after it's emitted)
-STR: name-dup       3 C,  68 C, 85 C, 80 C,
-
 \ ============================================================
 \ Initial symbol-table population — a handful of primitives for
 \ the parser MVP test. Full set added in step 009.
 \ ============================================================
-
-: XC-INIT-SYMBOLS
-  name-sp-fetch label-sp-fetch XC-REGISTER
-  name-fetch    label-fetch    XC-REGISTER
-  name-plus     label-plus     XC-REGISTER
-  name-nand     label-nand     XC-REGISTER
-  name-dup      fff-cfa-dup    XC-REGISTER
-;
 
 \ ============================================================
 \ Dynamic label construction (step 009)
@@ -335,71 +307,11 @@ STR: name-dup       3 C,  68 C, 85 C, 80 C,
 VARIABLE xc-counter
 0 xc-counter !
 
-\ MAKE-CFA-LABEL ( n -- counted-addr )
-\ Build "fff_c_<n>" as a counted string at HERE; return start addr.
-: MAKE-CFA-LABEL
-  HERE @ >R                  \ save start addr
-  0 C,                       \ placeholder length byte
-  102 C, 102 C, 102 C,       \ "fff"
-  95  C,                     \ "_"
-  99  C,                     \ "c"
-  95  C,                     \ "_"
-  NUM-C,                     \ decimal digits of n
-  HERE @ R@ - 1 -            \ length = HERE - start - 1 (excludes length byte)
-  R@ C!                      \ patch length byte
-  R>                         \ return start
-;
-
-\ MAKE-ENTRY-LABEL ( n -- counted-addr ) — "fff_e_<n>"
-: MAKE-ENTRY-LABEL
-  HERE @ >R
-  0 C,
-  102 C, 102 C, 102 C,       \ "fff"
-  95  C,                     \ "_"
-  101 C,                     \ "e"
-  95  C,                     \ "_"
-  NUM-C,
-  HERE @ R@ - 1 -
-  R@ C!
-  R>
-;
-
 \ ============================================================
 \ Token-emit dispatch
 \ ============================================================
 \ ?DUP ( x -- x x | 0 ) — dup if non-zero. Not in phase-3 Forth.
 : ?DUP  DUP IF DUP THEN ;
-
-\ XC-EMIT-TOKEN ( counted-addr -- )
-\ Resolve a source-Forth token (counted string) to emitted
-\ asm text. Three outcomes:
-\   - Symbol-table hit: emit ".word <label>".
-\   - Parseable number: emit ".word do_lit\n.word <n>".
-\   - Otherwise: emit "<name>" diagnostic on its own line so
-\     the failure is visible in the captured build output.
-: XC-EMIT-TOKEN  ( counted-addr -- )
-  DUP COUNT XC-FIND              \ counted entry-or-0
-  ?DUP IF
-    \ Match. Stack: counted entry.
-    6 + @                        \ entry label-ptr
-    EMIT-WORD-LABEL
-    DROP                         \ drop counted
-    EXIT
-  THEN
-  \ Not found via XC-FIND. Try NUMBER.
-  DUP NUMBER                     \ counted n flag   (flag: 0 ok, -1 fail)
-  0= IF
-    \ Success. Stack: counted n.
-    SWAP DROP                    \ drop counted, keep n
-    label-lit EMIT-WORD-LABEL
-    EMIT-WORD-LITERAL
-    EXIT
-  THEN
-  \ Failure. Stack: counted 0.
-  DROP                           \ drop the 0 placeholder
-  \ Emit the unresolvable token on its own line.
-  COUNT TYPE NL
-;
 
 \ ============================================================
 \ Def emission helpers
@@ -457,19 +369,6 @@ VARIABLE xc-prev-entry
   R>
 ;
 
-\ XC-COMPILE-NAME-BYTES ( counted -- )
-\ Emit `.byte <len>` then `.byte <c>` per char of counted string.
-: XC-COMPILE-NAME-BYTES
-  DUP C@                   \ len
-  DUP EMIT-BYTE-LITERAL    \ emit length
-  SWAP 1 + SWAP            \ (start-bytes len)
-  0 DO
-    DUP C@ EMIT-BYTE-LITERAL
-    1 +
-  LOOP
-  DROP
-;
-
 \ XC-READ-TOKEN ( -- counted-addr )  read next non-empty token.
 \ Skips EOL-induced empty WORD returns; returns when WORD gives
 \ a counted string with length > 0.
@@ -479,86 +378,6 @@ VARIABLE xc-prev-entry
     DUP C@                 \ counted len
     0= IF DROP 0 ELSE -1 THEN
   UNTIL
-;
-
-\ XC-IS-SEMI? ( counted-addr -- flag )
-\ Is this token exactly the single character `;` ?
-: XC-IS-SEMI?
-  DUP C@ 1 = IF
-    1 + C@ 59 =
-  ELSE
-    DROP 0
-  THEN
-;
-
-\ XC-COMPILE-BODY ( -- )  loop reading tokens, emit each via
-\ XC-EMIT-TOKEN, stop at `;` (emit do_exit).
-: XC-COMPILE-BODY
-  BEGIN
-    XC-READ-TOKEN
-    DUP XC-IS-SEMI? IF
-      DROP
-      label-exit EMIT-WORD-LABEL
-      EXIT
-    THEN
-    XC-EMIT-TOKEN
-  AGAIN
-;
-
-\ XC-COMPILE-ENTRY ( -- )  read name, emit dict header + DOCOL
-\ prelude, register in symbol table, compile body.
-\ NOTE (step 009 stop): integration of XC-READ-TOKEN +
-\ XC-COMPILE-BODY + IF/ELSE/UNTIL inside this def hits a
-\ phase-3 corner case that returns 0 instead of the counted
-\ string addr. Pieces tested individually all work:
-\   - NUM-C, emits decimal digits to HERE.
-\   - MAKE-CFA-LABEL / MAKE-ENTRY-LABEL build "fff_c_<N>" /
-\     "fff_e_<N>" counted strings (verified via XC-TEST-LABELS
-\     embedded in build-kernel.sh output).
-\   - XC-COPY-COUNTED dups WORD's transient buffer to HERE.
-\   - XC-COMPILE-NAME-BYTES emits ".byte" header bytes.
-\   - XC-READ-TOKEN, XC-IS-SEMI? work in isolation.
-\ Resolved 2026-10-23: the failure was phase-3 NUMBER rejecting -1;
-\ see docs/parser-debug-notes.md "Resolution".
-: XC-COMPILE-ENTRY
-  XC-READ-TOKEN
-  XC-COPY-COUNTED
-  xc-counter @ 1 + xc-counter !
-  xc-counter @ MAKE-ENTRY-LABEL
-  DUP EMIT-LABEL-DEF
-  xc-prev-entry @ ?DUP IF
-    EMIT-WORD-LABEL
-  ELSE
-    0 EMIT-WORD-LITERAL
-  THEN
-  xc-prev-entry !
-  DUP XC-COMPILE-NAME-BYTES
-  xc-counter @ MAKE-CFA-LABEL
-  DUP EMIT-LABEL-DEF
-  EMIT-FAR-DOCOL
-  XC-REGISTER
-  XC-COMPILE-BODY
-;
-
-\ Step 009 test: emit a label for counters 1, 2, 17 as a smoke
-\ check. Kept for now to spot-check MAKE-*-LABEL output.
-: XC-TEST-LABELS
-  1 MAKE-CFA-LABEL EMIT-WORD-LABEL
-  2 MAKE-ENTRY-LABEL EMIT-WORD-LABEL
-  17 MAKE-CFA-LABEL EMIT-WORD-LABEL
-;
-
-\ XC-COMPILE-TEST ( -- )
-\ Step 009 top-level test. Initialize symbol table, wrap output
-\ in BEGIN/END markers, then read one `: NAME body ;` sequence
-\ from the UART stream and cross-compile it via XC-COMPILE-ENTRY.
-\ Used by a dedicated test script that feeds a synthetic def.
-: XC-COMPILE-TEST
-  XC-INIT-SYMBOLS
-  NL marker-begin EMIT-COUNTED NL
-  XC-READ-TOKEN DROP          \ consume `:`, ignore it
-  XC-COMPILE-ENTRY
-  marker-end EMIT-COUNTED NL
 ;
 
 \ ============================================================
