@@ -1,0 +1,11 @@
+{
+  "task_type": "feature",
+  "state": {
+    "number": 2,
+    "step": "compile-runtime-from-source"
+  },
+  "action": "checkpoint commit, parallel verify gate (load ?-count, byte-identical rebuild, self-test), block-wise removal with drop.py, bisection with numbered markers",
+  "result": "success",
+  "reward": 1,
+  "timestamp": "2026-10-23T20:56:20"
+}
