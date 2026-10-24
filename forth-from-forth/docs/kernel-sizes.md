@@ -70,7 +70,7 @@ bootstrap, and strips every unreachable block (`scripts/dead-code.py`).
 | forth-from-forth/kernel.s, step 6a (template + compiled core) | 5,087 | 9,450 |
 | forth-from-forth/kernel.s, step 7 (bootstrap stripped) | 4,060 | 8,168 |
 
-Of the step-7 image, 2,442 lines are the compiled core (83 definitions);
+Of the step-7 image, 2,427 lines are the compiled core (83 definitions);
 the rest is the template's surviving primitives. Gone: the asm INTERPRET,
 QUIT, NUMBER, WORD, FIND, `:`, `;`, `[']` and 81 helper blocks (1,043 lines).
 Still present but unused: the FIND hash table, which CREATE maintains and
