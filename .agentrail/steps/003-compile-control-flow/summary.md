@@ -1,0 +1,1 @@
+Cross-compiler handles IF ELSE THEN BEGIN UNTIL AGAIN WHILE REPEAT; offsets from body-buffer cell counts; all 9 cases in tests/control.fth match the phase-3 kernel in SEE form (compare-see.sh, reg-rs tf24a_fff_xc_control_flow). Found that core 2SWAP/2OVER are wrong (recorded, not fixed). 86/86 reg-rs.
