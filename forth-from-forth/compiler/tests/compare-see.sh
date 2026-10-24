@@ -4,12 +4,14 @@
 # LIT n, BRANCH/0BRANCH offsets). Prints one line per definition and exits
 # non-zero on any mismatch. Both runs go in parallel.
 set -uo pipefail
+set -f   # word names such as * must not glob
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../../.." && pwd)"
 FFF="$ROOT/forth-from-forth"
 SRC="$1"
 WORK="$(mktemp -d -t compare-see)"; trap 'rm -rf "$WORK"' EXIT
 cat "$FFF/core/runtime.fth" "$SRC" > "$WORK/src.fth"
+
 cd "$ROOT"
 NAMES=$(grep -oE '^: +[^ ]+' "$SRC" | awk '{print $2}')
 SEE_LINES=$(for n in $NAMES; do echo "SEE $n"; done)
@@ -46,11 +48,17 @@ for l in open(xc).read().split('\n'):
             body.append(demangle(mm.group(1)) if mm else lab.get(w,w))
     elif l.startswith('; ?'): body.append('?'+l[4:])
 seel=[l.strip() for l in open(see) if l.strip()]
+# The target's . prints -8388608 (0x800000, which negates to itself) as
+# -0, so its SEE does too. Translate that one value; see status.md.
+seel=[re.sub(r'(?<!\S)-0(?!\S)','-8388608',l) for l in seel]
 bad=0
 for i,n in enumerate(names):
     toks=defs.get(n) or ['<missing>']
-    # SEE stops at the first EXIT and prints it as ;
-    if 'EXIT' in toks: toks=toks[:toks.index('EXIT')]+[';']
+    # SEE stops at the first EXIT that is executed (not a LIT operand)
+    # and prints it as ;
+    for k,t in enumerate(toks):
+        if t=='EXIT' and not (k and toks[k-1]=='LIT'):
+            toks=toks[:k]+[';']; break
     got=' '.join(toks)
     want=seel[i] if i<len(seel) else '<no SEE line>'
     ok=got==want; bad+=not ok

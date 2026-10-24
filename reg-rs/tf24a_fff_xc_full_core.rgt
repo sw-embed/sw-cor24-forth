@@ -1,0 +1,5 @@
+command = "forth-from-forth/compiler/tests/compare-core.sh"
+timeout = 900
+preprocess = "cat"
+exit_code = 0
+desc = "cross-compiler: all 68 definitions of minimal/lowlevel/midlevel/highlevel match the phase-3 kernel in SEE form"

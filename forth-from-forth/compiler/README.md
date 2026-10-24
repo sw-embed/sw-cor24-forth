@@ -31,7 +31,8 @@ because the assembler has no equates to patch it afterwards. `\` and `(`
 comments are skipped, numbers (including negative ones) become `LIT n`, and
 `['] X` becomes `LIT <X's label>`. `IF ELSE THEN BEGIN UNTIL AGAIN WHILE
 REPEAT` lay down `BRANCH`/`0BRANCH` with byte offsets computed from the body
-buffer, keeping open positions on the data stack as a running Forth does. A token it cannot resolve is emitted as a
+buffer, keeping open positions on the data stack as a running Forth does.
+`RECURSE` compiles a call to the definition being compiled. A token it cannot resolve is emitted as a
 `; ? TOKEN` comment so the build shows it.
 
 Each entry looks like this, for `: R@ RP@ 3 + @ ;`:
@@ -60,7 +61,8 @@ kept, anything else becomes `_<code>` (`R@` is `R_64`, `-` is `_45`).
 
 ## Not yet
 
-`DO ?DO LOOP`, `CONSTANT`/`VARIABLE`, the primitive bodies themselves, and booting a kernel
+`DO ?DO LOOP` and `CONSTANT`/`VARIABLE` (no core tier uses them), the
+primitive bodies themselves, and booting a kernel
 from the emitted image. See `../docs/status.md`.
 
 ## Tests
@@ -70,6 +72,11 @@ from the emitted image. See `../docs/status.md`.
 - `reg-rs/tf24a_fff_xc_control_flow` — `tests/compare-see.sh tests/control.fth`:
   every definition must match, in `SEE` form, what the phase-3 kernel
   compiles from the same source. Use the same script for any new construct.
+- `reg-rs/tf24a_fff_xc_full_core` — `tests/compare-core.sh`: the same check
+  over all 68 definitions of the four upper tiers.
+- `reg-rs/tf24a_fff_image_run` — `tests/image-test.sh`: the whole core,
+  compiled, linked after kernel.s and run from a direct test thread.
+  `SEE` comparison alone missed a wrong literal that this test caught.
 
 Never put a backslash followed by n, r, t, x or 0 in any file sent through
 `cor24-emu -u`, comments included: the emulator turns it into a control byte.

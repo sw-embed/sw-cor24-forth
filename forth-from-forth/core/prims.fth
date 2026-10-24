@@ -26,3 +26,15 @@ PRIM: ]       do_rbrac
 PRIM: HERE    do_here
 PRIM: LATEST  do_latest
 PRIM: STATE   do_state
+PRIM: EMIT        do_emit
+PRIM: KEY         do_key
+PRIM: <           do_less
+PRIM: EXECUTE     do_execute
+PRIM: BRANCH      do_branch
+PRIM: 0BRANCH     do_zbranch
+PRIM: BASE        do_base
+PRIM: WORD-BUFFER do_word_buffer
+PRIM: EOL-FLAG    do_eol_flag
+PRIM: (DO)        do_paren_do
+PRIM: (?DO)       do_paren_qdo
+PRIM: (LOOP)      do_paren_loop

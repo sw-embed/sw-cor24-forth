@@ -50,6 +50,9 @@
 \ logic but strip the trailing-space emit.
 
 : N.
+  \ -8388608 (0x800000) negates to itself, so the digit loop below
+  \ cannot print it. It is the bit pattern behind every 0< test.
+  DUP 8388608 = IF DROP 45 EMIT 56 EMIT 51 EMIT 56 EMIT 56 EMIT 54 EMIT 48 EMIT 56 EMIT EXIT THEN
   DUP 0< IF 45 EMIT NEGATE THEN
   0 >R
   BEGIN
@@ -375,6 +378,10 @@ XC-LIT-STR UNTIL   CONSTANT tok-until
 XC-LIT-STR AGAIN   CONSTANT tok-again
 XC-LIT-STR WHILE   CONSTANT tok-while
 XC-LIT-STR REPEAT  CONSTANT tok-repeat
+XC-LIT-STR RECURSE CONSTANT tok-recurse
+
+\ CFA label of the definition being compiled (for RECURSE).
+VARIABLE xc-current-cfa   0 xc-current-cfa !
 
 : XC-HERE-CELL  ( -- idx )  xc-body-cells @ ;
 : XC-OFFSET  ( target idx -- bytes )  - DUP DUP + + ;
@@ -402,6 +409,7 @@ XC-LIT-STR REPEAT  CONSTANT tok-repeat
   DUP tok-again  XC-SAME? IF DROP XC-AGAIN  -1 EXIT THEN
   DUP tok-while  XC-SAME? IF DROP XC-WHILE  -1 EXIT THEN
   DUP tok-repeat XC-SAME? IF DROP XC-REPEAT -1 EXIT THEN
+  DUP tok-recurse XC-SAME? IF DROP xc-current-cfa @ 0 XC-BODY, -1 EXIT THEN
   0
 ;
 
@@ -454,6 +462,7 @@ VARIABLE xc-imm       0 xc-imm !
   xc-counter @ 1 + xc-counter !
   DUP xc-counter @ 99 XC-MAKE-LABEL             \ name cfa
   2DUP XC-REGISTER
+  DUP xc-current-cfa !
   XC-COLLECT-BODY
   0 xc-imm !
   XC-READ-TOKEN DUP tok-immediate XC-SAME?

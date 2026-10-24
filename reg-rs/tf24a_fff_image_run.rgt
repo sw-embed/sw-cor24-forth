@@ -1,0 +1,5 @@
+command = "forth-from-forth/compiler/tests/image-test.sh 2>&1"
+timeout = 900
+preprocess = "cat"
+exit_code = 0
+desc = "cross-compiled 5-tier dictionary linked after kernel.s runs: . * MOD ROT ROLL HEX on a direct test thread"

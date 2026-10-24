@@ -30,3 +30,13 @@ Kernel.s ≤ 2000 lines, assembled ≤ 3000 bytes, zero asm
 bootstrap interpreter code in the emitted file. Core Forth
 tier byte-identical to phase 3 — no changes to the 450 lines
 of user-visible Forth.
+
+## Emitted dictionary (saga phase-4-tab-4)
+
+| Step | What the compiler emits | Definitions | asm lines | bytes | build time |
+|------|-------------------------|------------:|----------:|------:|-----------:|
+| 5 (2026-10-23) | all five core tiers, from source | 82 | 2410 | 5432 | ~38 s |
+
+Bytes are the assembled size of the dictionary alone (kernel + dict minus
+kernel, 4001 bytes). The kernel is still the phase-3 copy; step 6 replaces it
+with emitted primitives and an image boot.
