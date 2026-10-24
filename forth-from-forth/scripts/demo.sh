@@ -15,11 +15,13 @@ FOF="$HERE/.."
 cd "$ROOT"
 EXAMPLE="${1:-examples/14-fib.fth}"
 CORE_FILES=()
-for tier in runtime minimal lowlevel midlevel highlevel; do
+# kernel.s is an image with the core already compiled in (build-image.sh),
+# so no core files are sent.
+for tier in; do
   f="$FOF/core/$tier.fth"
   [ -f "$f" ] && CORE_FILES+=("$f")
 done
-INPUT="$(cat "${CORE_FILES[@]}" "$EXAMPLE" 2>/dev/null)
+INPUT="$(cat ${CORE_FILES[@]+"${CORE_FILES[@]}"} "$EXAMPLE" 2>/dev/null)
 "
 "$FOF/../scripts/run-kernel.sh" "$FOF/kernel.s" -u "$INPUT" --speed 0 -n 800000000 2>&1 \
   | sed -n '/^UART output:/,$p' || true

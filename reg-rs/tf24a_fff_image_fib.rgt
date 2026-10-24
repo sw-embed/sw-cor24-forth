@@ -1,0 +1,8 @@
+command = """
+scripts/run-kernel.sh forth-from-forth/kernel.s -u "$(cat examples/14-fib.fth)
+DEPTH .
+" --speed 0 -n 400000000 2>&1"""
+timeout = 600
+preprocess = "sed -n '/^UART output:/,$p' || true"
+exit_code = 0
+desc = "image kernel: fib with no core files on the UART; stack empty after"

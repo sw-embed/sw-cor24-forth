@@ -1,0 +1,7 @@
+command = """
+scripts/run-kernel.sh forth-from-forth/kernel.s -u "$(cat examples/13-loop-switch-led.fth)
+" --switch-at 20000000:on,30000000:off,40000000:on,50000000:off --speed 0 -n 60000000 2>&1"""
+timeout = 600
+preprocess = '''grep -E '^\[(S2|LED) @|^Stack (over|under)flow' || true'''
+exit_code = 0
+desc = "image kernel: LED D2 follows switch S2 in the MIRROR demo"

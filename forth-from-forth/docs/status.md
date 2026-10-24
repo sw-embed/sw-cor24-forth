@@ -14,8 +14,8 @@ superseded by the current saga.
 | Cross-compiler `compiler/xcomp.fth` | Compiles `runtime.fth` from source (`XC-COMPILE-SOURCE`): comments, literals, `[']`, `IMMEDIATE`, and since step 3 `IF ELSE THEN BEGIN UNTIL AGAIN WHILE REPEAT` (matched against the phase-3 kernel with `compiler/tests/compare-see.sh`). Output is byte-identical to the April hand-listed emitters, which are gone. Self-test image runs it. |
 | Primitive registry `core/prims.fth` | Names and labels of the 32 primitives the core uses; no asm bodies yet. |
 | All five core tiers | Compiled from source: 82 definitions, 0 unresolved, 2,410 asm lines, 5,432 bytes. All match the phase-3 kernel in `SEE` form, and linked after kernel.s they run (`compiler/tests/image-test.sh`). |
-| Image boot, no UART bootstrap | Not started (saga step 004). |
-| `kernel.s` | Still a copy of `../forth-on-forthish/kernel.s`. |
+| Image boot, no UART bootstrap | Done (step 6a): `scripts/build-image.sh` generates `kernel.s` from the primitive template `../forth-on-forthish/kernel.s` plus the compiled core; it boots straight into the Forth QUIT. First output after 0.71 M instructions, against 149.56 M for forth-on-forthish streaming the core. |
+| `kernel.s` | GENERATED. Regenerate with `scripts/build-image.sh`; `--check` fails when stale. Primitives still come from the hand-written template (step 6b moves them into `core/prims.fth`); the assembly bootstrap is still present but never runs (step 7 removes it). |
 | Web tab 4 | Not started (saga step 006). |
 
 ## Saga phase-4-tab-4
@@ -25,7 +25,7 @@ superseded by the current saga.
 3. compile-control-flow — done 2026-10-23
 4. compile-loops-and-defining-words — deferred (no core tier uses DO/LOOP/CONSTANT/VARIABLE); re-added as step 11
 5. compile-full-core — done 2026-10-23
-6. prims-and-image-boot
+6. prims-and-image-boot — 6a image boot done 2026-10-23; 6b (primitive bodies from prims.fth) split out
 7. delete-bootstrap-and-rebaseline
 8. web-tab-4 (web-sw-cor24-forth)
 9. blog-brief
@@ -41,6 +41,12 @@ parser, plus GH #3 words in the layered kernels (`:NONAME`, `?DUP`,
 `MIN`, `MAX`, comparisons, `RECURSE`, `ROLL`, `J`).
 
 ## Found on the way (not fixed yet)
+
+- forth-on-forthish starts every session with a stray cell (3051) on the
+  data stack, left by the `? ? ?` errors its assembly bootstrap prints while
+  loading runtime.fth. `.S` shows `<4>` for three items and the Self Test's
+  final `DEPTH .` prints 1. The image kernel does not run that bootstrap and
+  shows `<3>` and 0.
 
 - `2SWAP` and `2OVER` in `core/lowlevel.fth` (forth-in-forth, forth-on-forthish,
   forth-from-forth, and `examples/14-fib.fth`) are wrong: `1 2 3 4 2SWAP`

@@ -40,3 +40,19 @@ of user-visible Forth.
 Bytes are the assembled size of the dictionary alone (kernel + dict minus
 kernel, 4001 bytes). The kernel is still the phase-3 copy; step 6 replaces it
 with emitted primitives and an image boot.
+
+## Image boot (step 6a)
+
+`kernel.s` = primitive template + compiled core, booting into the Forth
+QUIT. Instructions until the first UART output for the input `7777 .`:
+
+| Kernel | How the core arrives | First output at |
+|---|---|---:|
+| forth.s | all assembly | 80,000 |
+| forth-from-forth | compiled into the image | 710,000 |
+| forth-in-forth | 4 tiers over the UART | 87,440,000 |
+| forth-on-forthish | 5 tiers over the UART | 149,560,000 |
+
+Every example except 21-hog (never ends) and 13 (needs the switch) gives the
+same output as on forth-on-forthish, except 00-smoke and 12-selftest, where
+forth-on-forthish shows a stray stack cell from its bootstrap (see status.md).

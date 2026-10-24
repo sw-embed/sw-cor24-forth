@@ -8,13 +8,15 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 FOF="$HERE/.."
 CORE_FILES=()
-for tier in runtime minimal lowlevel midlevel highlevel; do
+# kernel.s is an image with the core already compiled in (build-image.sh),
+# so no core files are sent.
+for tier in; do
   f="$FOF/core/$tier.fth"
   [ -f "$f" ] && CORE_FILES+=("$f")
 done
 
 MARKER='61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 61 EMIT 10 EMIT'
-INPUT=$'\n'"$(cat "${CORE_FILES[@]}")"$'\n'"$MARKER"$'\n: SQUARE DUP * ;\n: CUBE DUP SQUARE * ;\nDUMP-ALL\n'
+INPUT=$'\n'"$(cat ${CORE_FILES[@]+"${CORE_FILES[@]}"})"$'\n'"$MARKER"$'\n: SQUARE DUP * ;\n: CUBE DUP SQUARE * ;\nDUMP-ALL\n'
 
 "$FOF/../scripts/run-kernel.sh" "$FOF/kernel.s" -u "$INPUT" --speed 0 -n 1000000000 2>&1 \
   | sed -n '/^UART output:/,$p' \
