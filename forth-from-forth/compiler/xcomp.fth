@@ -165,105 +165,10 @@ STR: label-nand  7 C,
 \ Naming convention: fff_entry_<NAME> for dict header,
 \                    fff_cfa_<NAME> for CFA start (body = PFA).
 
-\ "fff_entry_DUP" — 13 chars
-STR: fff-entry-dup  13 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  68 C, 85 C, 80 C,
-
 \ "fff_cfa_DUP" — 11 chars
 STR: fff-cfa-dup  11 C,
   102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
   68 C, 85 C, 80 C,
-
-\ "fff_entry_DROP" — 14 chars
-STR: fff-entry-drop  14 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  68 C, 82 C, 79 C, 80 C,
-
-\ "fff_cfa_DROP" — 12 chars
-STR: fff-cfa-drop  12 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  68 C, 82 C, 79 C, 80 C,
-
-\ "fff_entry_OVER" — 14 chars
-STR: fff-entry-over  14 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  79 C, 86 C, 69 C, 82 C,
-
-\ "fff_cfa_OVER" — 12 chars
-STR: fff-cfa-over  12 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  79 C, 86 C, 69 C, 82 C,
-
-\ "fff_entry_SWAP" — 14 chars
-STR: fff-entry-swap  14 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  83 C, 87 C, 65 C, 80 C,
-
-\ "fff_cfa_SWAP" — 12 chars
-STR: fff-cfa-swap  12 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  83 C, 87 C, 65 C, 80 C,
-
-\ "fff_entry_R@" — 12 chars
-STR: fff-entry-r-at  12 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  82 C, 64 C,
-
-\ "fff_cfa_R@" — 10 chars
-STR: fff-cfa-r-at  10 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  82 C, 64 C,
-
-\ "fff_entry_INVERT" — 16 chars
-STR: fff-entry-invert  16 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  73 C, 78 C, 86 C, 69 C, 82 C, 84 C,
-
-\ "fff_cfa_INVERT" — 14 chars
-STR: fff-cfa-invert  14 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  73 C, 78 C, 86 C, 69 C, 82 C, 84 C,
-
-\ "fff_entry_AND" — 13 chars
-STR: fff-entry-and  13 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  65 C, 78 C, 68 C,
-
-\ "fff_cfa_AND" — 11 chars
-STR: fff-cfa-and  11 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  65 C, 78 C, 68 C,
-
-\ "fff_entry_OR" — 12 chars
-STR: fff-entry-or  12 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  79 C, 82 C,
-
-\ "fff_cfa_OR" — 10 chars
-STR: fff-cfa-or  10 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  79 C, 82 C,
-
-\ "fff_entry_XOR" — 13 chars
-STR: fff-entry-xor  13 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  88 C, 79 C, 82 C,
-
-\ "fff_cfa_XOR" — 11 chars
-STR: fff-cfa-xor  11 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  88 C, 79 C, 82 C,
-
-\ "fff_entry_NEGATE" — 16 chars
-STR: fff-entry-negate  16 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  78 C, 69 C, 71 C, 65 C, 84 C, 69 C,
-
-\ "fff_cfa_NEGATE" — 14 chars
-STR: fff-cfa-negate  14 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  78 C, 69 C, 71 C, 65 C, 84 C, 69 C,
 
 \ ============================================================
 \ Additional primitive labels needed for - : ; defs
@@ -315,36 +220,6 @@ STR: label-comma  8 C,
 \ ============================================================
 \ The actual NAMES (byte values 45, 58, 59) are non-alphanumeric,
 \ so labels use spelled-out forms: MINUS, COLON, SEMI.
-
-\ "fff_entry_MINUS" — 15 chars
-STR: fff-entry-minus  15 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  77 C, 73 C, 78 C, 85 C, 83 C,
-
-\ "fff_cfa_MINUS" — 13 chars
-STR: fff-cfa-minus  13 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  77 C, 73 C, 78 C, 85 C, 83 C,
-
-\ "fff_entry_COLON" — 15 chars
-STR: fff-entry-colon  15 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  67 C, 79 C, 76 C, 79 C, 78 C,
-
-\ "fff_cfa_COLON" — 13 chars
-STR: fff-cfa-colon  13 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  67 C, 79 C, 76 C, 79 C, 78 C,
-
-\ "fff_entry_SEMI" — 14 chars
-STR: fff-entry-semi  14 C,
-  102 C, 102 C, 102 C, 95 C, 101 C, 110 C, 116 C, 114 C, 121 C, 95 C,
-  83 C, 69 C, 77 C, 73 C,
-
-\ "fff_cfa_SEMI" — 12 chars
-STR: fff-cfa-semi  12 C,
-  102 C, 102 C, 102 C, 95 C, 99 C, 102 C, 97 C, 95 C,
-  83 C, 69 C, 77 C, 73 C,
 
 \ ============================================================
 \ Symbol-table infrastructure (step 008 parser MVP)
