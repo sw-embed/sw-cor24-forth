@@ -1,3 +1,3 @@
-build-image: unlinked shadowed entries: : ; INTERPRET QUIT
-build-image: blocks 399, live 344, dead 55 (612 lines)
+build-image: unlinked shadowed entries: : ; INTERPRET QUIT [']
+build-image: blocks 401, live 316, dead 85 (1043 lines)
 kernel.s is current

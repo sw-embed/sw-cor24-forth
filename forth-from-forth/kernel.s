@@ -376,14 +376,6 @@ lt_done:
 
 ; do_drop: kept as an internal helper for tick_word_cfa (['])
 ; — no dict entry, so the user-level DROP is the Forth version.
-do_drop:
-    pop r0
-    ; NEXT
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; >R ( x -- ) ( R: -- x )
 entry_tor:
     .word entry_less
     .byte 2
@@ -753,401 +745,6 @@ do_rbrac:
 ; core/highlevel.fth (simple linked-list walk; no hash or lookaside
 ; fast path). The asm do_find body remains because INTERPRET and
 ; tick_word_cfa reference `.word do_find` by address.
-do_find:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP          RS: [IP]
-
-    pop r0               ; r0 = c-addr
-    add r1, -3
-    sw r0, 0(r1)        ; save c-addr      RS: [c-addr, IP]
-
-    lbu r2, 0(r0)       ; r2 = search length
-    add r1, -3
-    sw r2, 0(r1)        ; save search_len  RS: [search_len, c-addr, IP]
-
-    add r0, 1           ; r0 = search name start
-    add r1, -3
-    sw r0, 0(r1)        ; save search_start RS: [ss, sl, ca, IP]
-
-    ; Load start entry via mult33 hash (fallback to LATEST on miss).
-    ; RS holds [ss, sl, ca, IP]; ss = name start, sl = length.
-    lw r0, 0(r1)         ; r0 = search_start
-    la r2, hash_arg_ptr
-    sw r0, 0(r2)
-    lw r0, 3(r1)         ; r0 = search_len
-    la r2, hash_arg_len
-    sw r0, 0(r2)
-    la r2, hash_ret_addr
-    la r0, find_after_hash
-    sw r0, 0(r2)
-    la r0, compute_hash
-    jmp (r0)
-find_after_hash:
-    ; Lookaside fast path: if full 24-bit hash matches last cached
-    ; FIND result AND the cached cfa is non-zero, push (cfa, flag)
-    ; and return immediately.
-    la r0, hash_full
-    lw r0, 0(r0)              ; r0 = current 24-bit hash
-    la r2, lookaside_hash
-    lw r2, 0(r2)
-    ceq r0, r2
-    brf la_miss
-    la r0, lookaside_cfa
-    lw r0, 0(r0)
-    ceq r0, z
-    brt la_miss               ; cfa=0 means cache empty
-    push r0                   ; DS: [cfa]
-    la r0, lookaside_flag
-    lw r0, 0(r0)
-    push r0                   ; DS: [flag, cfa]
-    ; Clean up RS [ss, sl, ca, IP] — IP is at offset 9
-    lw r2, 9(r1)
-    add r1, 12                ; pop 4 cells
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-la_miss:
-    la r0, hash_result
-    lw r0, 0(r0)         ; r0 = bucket
-    lc r2, 3
-    mul r0, r2           ; r0 = bucket * 3
-    add r1, -3
-    sw r0, 0(r1)
-    la r0, dict_hash_table
-    lw r2, 0(r1)
-    add r1, 3
-    add r0, r2           ; r0 = slot addr
-    lw r0, 0(r0)         ; r0 = bucket entry (or 0)
-    ceq r0, z
-    brf find_have_start
-    la r2, var_latest_val
-    lw r0, 0(r2)         ; fallback: start at LATEST
-find_have_start:
-    push r0              ; DS: [entry]
-
-find_loop:
-    ; Entry pointer is on data stack
-    pop r0               ; r0 = entry (0 = end of chain)
-    ceq r0, z
-    brf find_have_entry
-
-    ; === Not found (inline handler) ===
-    lw r0, 6(r1)        ; c-addr (RS offset 6)
-    add r1, 9           ; pop ss, sl, ca. RS: [IP]
-    push r0              ; DS: [c-addr]
-    lc r0, 0
-    push r0              ; DS: [0, c-addr]
-    lw r2, 0(r1)
-    add r1, 3
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-find_have_entry:
-    ; r0 = entry pointer
-    ; Save entry on RS
-    add r1, -3
-    sw r0, 0(r1)        ; RS: [entry, ss, sl, ca, IP]
-
-    ; Load flags_len byte
-    lbu r2, 3(r0)       ; r2 = flags_len
-    add r1, -3
-    sw r2, 0(r1)        ; RS: [fl, entry, ss, sl, ca, IP]
-
-    ; Check HIDDEN (bit 6): if hidden, skip via la+jmp
-    lcu r0, 64
-    and r0, r2
-    ceq r0, z
-    brt find_not_hidden
-    la r0, find_skip_entry
-    jmp (r0)
-find_not_hidden:
-
-    ; Extract name_len = flags_len & 0x3F
-    lw r0, 0(r1)        ; r0 = flags_len
-    lcu r2, 63
-    and r0, r2           ; r0 = name_len
-
-    ; Compare with search_len
-    lw r2, 9(r1)        ; r2 = search_len (RS offset 9)
-    ceq r0, r2
-    brt find_len_match
-    la r0, find_skip_entry
-    jmp (r0)
-find_len_match:
-
-    ; === Lengths match — compare characters ===
-    ; r0 = name_len = counter
-
-    ; Save counter
-    add r1, -3
-    sw r0, 0(r1)        ; RS: [ctr, fl, entry, ss, sl, ca, IP]
-
-    ; ename_ptr = entry + 4
-    lw r0, 6(r1)        ; entry (RS offset 6)
-    add r0, 4
-    add r1, -3
-    sw r0, 0(r1)        ; RS: [ep, ctr, fl, entry, ss, sl, ca, IP]
-
-    ; sname_ptr = search_start
-    lw r0, 12(r1)       ; search_start (RS offset 12)
-    add r1, -3
-    sw r0, 0(r1)        ; RS: [sp, ep, ctr, fl, entry, ss, sl, ca, IP]
-
-find_cmp_loop:
-    lw r0, 6(r1)        ; counter (RS offset 6)
-    ceq r0, z
-    brt find_matched
-
-    ; Load entry char
-    lw r0, 3(r1)        ; ename_ptr (RS offset 3)
-    lbu r2, 0(r0)       ; r2 = entry char
-
-    ; Load search char
-    lw r0, 0(r1)        ; sname_ptr (RS offset 0)
-    lbu r0, 0(r0)       ; r0 = search char
-
-    ceq r0, r2
-    brf find_char_fail
-
-    ; Advance ename_ptr
-    lw r0, 3(r1)
-    add r0, 1
-    sw r0, 3(r1)
-    ; Advance sname_ptr
-    lw r0, 0(r1)
-    add r0, 1
-    sw r0, 0(r1)
-    ; Decrement counter
-    lw r0, 6(r1)
-    add r0, -1
-    sw r0, 6(r1)
-    bra find_cmp_loop
-
-find_char_fail:
-    add r1, 9           ; pop sp, ep, ctr
-    ; RS: [fl, entry, ss, sl, ca, IP]
-    ; Fall through to find_skip_entry
-
-find_skip_entry:
-    ; RS: [fl, entry, ss, sl, ca, IP]
-    add r1, 3           ; pop flags_len
-    lw r0, 0(r1)        ; entry
-    add r1, 3           ; pop entry. RS: [ss, sl, ca, IP]
-    lw r0, 0(r0)        ; follow link
-    push r0              ; push next entry on DS
-    la r0, find_loop
-    jmp (r0)             ; back to loop (too far for bra)
-
-find_matched:
-    add r1, 9           ; pop sp, ep, ctr
-    ; RS: [fl, entry, ss, sl, ca, IP]
-
-    ; Read flags_len and entry BEFORE cleaning RS
-    lw r0, 0(r1)        ; r0 = flags_len
-    push r0              ; save flags_len on DS
-    lw r2, 3(r1)        ; r2 = entry
-    add r1, 15          ; pop fl, entry, ss, sl, ca. RS: [IP]
-
-    ; Compute name_len = flags_len & 0x3F
-    pop r0               ; r0 = flags_len
-    push r0              ; keep flags_len on DS for IMMEDIATE check
-    push r2              ; save entry. DS: [entry, flags_len]
-    lcu r2, 63
-    and r0, r2           ; r0 = name_len
-    pop r2               ; r2 = entry. DS: [flags_len]
-
-    ; CFA = entry + 4 + name_len
-    add r2, 4
-    add r2, r0           ; r2 = CFA
-    push r2              ; DS: [CFA, flags_len]
-
-    ; Check IMMEDIATE (bit 7 of original flags_len)
-    pop r2               ; r2 = CFA (save temporarily)
-    pop r0               ; r0 = flags_len. DS: []
-    push r2              ; CFA back on DS: [CFA]
-    lcu r2, 128
-    and r0, r2           ; r0 = flags_len & 128
-    ceq r0, z
-    brt find_normal
-    lc r0, 1             ; IMMEDIATE → flag = 1
-    bra find_push_flag
-find_normal:
-    lc r0, -1            ; normal → flag = -1
-find_push_flag:
-    push r0              ; DS: [flag, CFA]
-
-    ; Update lookaside cache (peek DS via fp, no pops).
-    mov fp, sp
-    lw r0, 0(fp)         ; r0 = flag (top)
-    la r2, lookaside_flag
-    sw r0, 0(r2)
-    lw r0, 3(fp)         ; r0 = CFA (second)
-    la r2, lookaside_cfa
-    sw r0, 0(r2)
-    la r0, hash_full
-    lw r0, 0(r0)
-    la r2, lookaside_hash
-    sw r0, 0(r2)
-
-    ; Restore IP and NEXT
-    lw r2, 0(r1)
-    add r1, 3
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; ============================================================
-; WORD, CREATE, COLON, SEMICOLON, IMMEDIATE
-; ============================================================
-
-; ------------------------------------------------------------
-; do_word ( -- c-addr ) : Read space-delimited word from UART.
-; Subset 17: dict entry removed — user-visible WORD is now a Forth
-; colon def in core/lowlevel.fth that uses KEY / WORD-BUFFER /
-; EOL-FLAG. The asm body stays here because INTERPRET and
-; tick_word_cfa (the `[']` impl) reference .word do_word directly.
-; ------------------------------------------------------------
-do_word:
-    add r1, -3
-    sw r2, 0(r1)        ; save IP. RS: [IP]
-
-    ; Check if previous call ended on newline
-    la r0, word_eol_flag
-    lbu r0, 0(r0)
-    ceq r0, z
-    brt word_no_eol
-    ; Clear flag and return empty counted string (length=0)
-    la r0, word_eol_flag
-    lc r2, 0
-    sb r2, 0(r0)
-    la r0, word_buffer
-    sb r2, 0(r0)        ; word_buffer[0] = 0 (length)
-    push r0              ; push word_buffer address onto DS
-    ; Restore IP from RS and NEXT (normal WORD return path)
-    lw r2, 0(r1)
-    add r1, 3
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-word_no_eol:
-
-    ; Init buffer pointer (past count byte)
-    la r0, word_buffer
-    add r0, 1
-    add r1, -3
-    sw r0, 0(r1)        ; RS: [buf_ptr, IP]
-
-    ; --- Skip leading spaces (NOT newlines) ---
-    ; Spaces (32) are skipped. Newline (10, 13) → return empty.
-    ; Any other char < 32 is skipped (control chars).
-word_skip:
-    la r0, -65280        ; UART base
-word_skip_rx:
-    lbu r2, 1(r0)       ; r2 = status
-    lcu r0, 1
-    and r2, r0           ; r2 = RX ready bit
-    ceq r2, z
-    brt word_skip_rx2    ; not ready, retry
-    la r0, -65280
-    lbu r0, 0(r0)       ; r0 = char
-    ; Check for newline (10) → return empty
-    lcu r2, 10
-    ceq r0, r2
-    brt word_empty       ; newline → empty token
-    ; Check for CR (13) → return empty
-    lcu r2, 13
-    ceq r0, r2
-    brt word_empty
-    ; Skip spaces and other control chars
-    lcu r2, 33
-    clu r0, r2           ; C = (char < 33)
-    brt word_skip        ; skip, read another
-    bra word_store       ; got a real char
-word_skip_rx2:
-    la r0, -65280
-    bra word_skip_rx
-
-word_empty:
-    ; Return empty counted string (length=0)
-    la r0, word_buffer
-    lc r2, 0
-    sb r2, 0(r0)        ; store count=0
-    add r1, 3           ; pop buf_ptr. RS: [IP]
-    push r0              ; push word_buffer address
-    lw r2, 0(r1)
-    add r1, 3
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-    ; --- Store char and read more ---
-word_store:
-    ; r0 = char to store
-    lw r2, 0(r1)        ; r2 = buf_ptr
-    sb r0, 0(r2)        ; store char
-    add r2, 1
-    sw r2, 0(r1)        ; update buf_ptr
-
-word_read:
-    la r0, -65280
-word_read_rx:
-    lbu r2, 1(r0)
-    lcu r0, 1
-    and r2, r0
-    ceq r2, z
-    brt word_read_rx2
-    la r0, -65280
-    lbu r0, 0(r0)       ; r0 = char
-    lcu r2, 33
-    clu r0, r2           ; C = (char < 33)
-    brt word_end         ; delimiter found
-    bra word_store       ; store and continue
-word_read_rx2:
-    la r0, -65280
-    bra word_read_rx
-
-word_end:
-    ; r0 = delimiter char that ended the word
-    ; Check if delimiter is newline → set eol flag
-    push r0              ; save delimiter
-    lcu r2, 10
-    ceq r0, r2
-    brt word_set_eol
-    lcu r2, 13
-    ceq r0, r2
-    brt word_set_eol
-    bra word_no_set_eol
-word_set_eol:
-    la r0, word_eol_flag
-    lc r2, 1
-    sb r2, 0(r0)
-word_no_set_eol:
-    pop r0               ; discard delimiter
-
-    ; Compute length = buf_ptr - (word_buffer + 1)
-    lw r2, 0(r1)        ; r2 = final buf_ptr
-    add r1, 3           ; pop buf_ptr. RS: [IP]
-    la r0, word_buffer
-    add r0, 1           ; r0 = data start
-    sub r2, r0           ; r2 = length
-    la r0, word_buffer
-    sb r2, 0(r0)        ; store count byte
-    push r0              ; push word_buffer address
-
-    ; Restore IP and NEXT
-    lw r2, 0(r1)
-    add r1, 3
-    lw r0, 0(r2)
-    add r2, 3
-    jmp (r0)
-
-; ------------------------------------------------------------
-; CREATE ( -- ) : Read name, build dictionary header at HERE
-; Reads next word from UART input, builds link+flags+name at HERE.
-; Updates LATEST. Does NOT write CFA — caller does that.
-; ------------------------------------------------------------
 entry_create:
     .word entry_rbrac        ; was entry_find; FIND is now in core/highlevel.fth
                              ; (asm do_find body stays — INTERPRET's thread + [']
@@ -1683,36 +1280,8 @@ do_eol_flag:
 ; and compile `LIT cfa` into the current definition [IMMEDIATE].
 ; Used by core.fth's IF/THEN/ELSE/UNTIL to embed BRANCH/0BRANCH CFAs.
 ; ------------------------------------------------------------
-entry_tick:
-    .word entry_eol_flag     ; was entry_eol_store; EOL! removed
-    .byte 0x83           ; length=3 + IMMEDIATE
-    .byte 91, 39, 93     ; "[']"
-tick_word_cfa:
-    push r0
-    la r0, do_docol_far
-    jmp (r0)
-    .word do_word        ; ( -- c-addr )
-    .word do_find        ; ( c-addr -- cfa flag )  [assumes word is found]
-    .word do_drop        ; drop flag, leaves cfa on DS
-    .word do_lit
-    .word do_lit         ; push address of do_lit itself
-    .word do_comma       ; compile do_lit into current def
-    .word do_comma       ; compile the CFA that was on DS
-    .word do_exit
-
-; ============================================================
-; DO/LOOP runtime primitives (used by IMMEDIATE DO/LOOP/?DO in
-; core/midlevel.fth). RS layout while inside a DO-loop body:
-;   top:       [ index        ]
-;              [ limit        ]
-;   deeper:    [ caller's IP  ]
-; So EXIT inside a loop corrupts the return unless UNLOOP runs
-; first. That matches standard Forth.
-; ============================================================
-
-; (DO) ( limit start -- )  ( R: -- limit index )
 entry_paren_do:
-    .word entry_tick
+    .word entry_eol_flag
     .byte 4
     .byte 40, 68, 79, 41        ; "(DO)"
 do_paren_do:
@@ -2044,7 +1613,7 @@ word_buffer:
 ; ============================================================
 ; ============================================================
 ; Core dictionary, cross-compiled from core/*.fth by
-; compiler/xcomp.fth (scripts/build-image.sh). 82 definitions.
+; compiler/xcomp.fth (scripts/build-image.sh). 83 definitions.
 ; ============================================================
 fff_e1_DUP:
 .word entry_quit_vector
@@ -4456,8 +4025,25 @@ fff_c82_QUIT:
 .word do_branch
 .word -57
 .word do_exit
+fff_e83__91_39_93:
+.word fff_e82_QUIT
+.byte 131
+.byte 91
+.byte 39
+.byte 93
+fff_c83__91_39_93:
+.byte 125
+.byte 41
+.word do_docol_far
+.byte 38
+.word fff_c69__39
+.word do_lit
+.word do_lit
+.word do_comma
+.word do_comma
+.word do_exit
 fff_latest:
-    .word fff_e82_QUIT
+    .word fff_e83__91_39_93
 
 test_thread:
     ; QUIT-VECTOR = Forth QUIT (the stack-underflow handler restarts

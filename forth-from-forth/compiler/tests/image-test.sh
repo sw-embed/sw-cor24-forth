@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # image-test.sh — compile all five core tiers with the cross-compiler, link
-# the emitted dictionary after forth-from-forth/kernel.s, and run a test
+# the emitted dictionary after the primitive template (forth-on-forthish/
+# kernel.s), and run a test
 # thread that calls compiled words directly (no UART bootstrap, no
 # INTERPRET). Proves the emitted dictionary executes, not just that it
 # looks right. Expected UART output:
@@ -24,7 +25,7 @@ DOT=$(cfa _46); STAR=$(cfa _42)
 w() { echo "    .word $1"; }
 lit() { w do_lit; w "$1"; }
 {
-  cat "$FFF/kernel.s"
+  cat "$ROOT/forth-on-forthish/kernel.s"   # the primitive template, not the generated image
   cat "$WORK/dict.s"
   echo "fff_test_start:"
   echo "    mov fp, sp          ; var_sp_base = reset sp, as _start does"

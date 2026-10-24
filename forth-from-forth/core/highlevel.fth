@@ -290,5 +290,10 @@
 \ do_quit_ok / do_quit_restart continue to drive lines up to this
 \ point; once QUIT executes here it never returns, and all
 \ subsequent input (including examples/*.fth) flows through Forth.
+\ ['] in Forth (forth-from-forth only). The asm ['] reads the next
+\ name with the asm WORD and FIND; this one uses the Forth ' above, so
+\ the image kernel can drop the asm WORD, FIND and their helpers.
+: [']  ' ['] LIT , , ; IMMEDIATE
+
 ' QUIT QUIT-VECTOR !
 QUIT

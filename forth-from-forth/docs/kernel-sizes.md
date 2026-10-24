@@ -56,3 +56,22 @@ QUIT. Instructions until the first UART output for the input `7777 .`:
 Every example except 21-hog (never ends) and 13 (needs the switch) gives the
 same output as on forth-on-forthish, except 00-smoke and 12-selftest, where
 forth-on-forthish shows a stray stack cell from its bootstrap (see status.md).
+
+## Dead code removed (step 7)
+
+`build-image.sh` unlinks assembly entries the compiled core redefines
+(`:` `;` `INTERPRET` `QUIT`, and `[']` once forth-from-forth's highlevel.fth
+gained a Forth `[']`), drops the underflow handler's fallback to the asm
+bootstrap, and strips every unreachable block (`scripts/dead-code.py`).
+
+| | asm lines | assembled bytes |
+|---|---:|---:|
+| forth-on-forthish/kernel.s (template, primitives + bootstrap) | 2,659 | 4,001 |
+| forth-from-forth/kernel.s, step 6a (template + compiled core) | 5,087 | 9,450 |
+| forth-from-forth/kernel.s, step 7 (bootstrap stripped) | 4,060 | 8,168 |
+
+Of the step-7 image, 2,442 lines are the compiled core (83 definitions);
+the rest is the template's surviving primitives. Gone: the asm INTERPRET,
+QUIT, NUMBER, WORD, FIND, `:`, `;`, `[']` and 81 helper blocks (1,043 lines).
+Still present but unused: the FIND hash table, which CREATE maintains and
+_start fills; it goes when the primitives move into core/prims.fth.
