@@ -33,15 +33,37 @@ gives the same kernel.s.
 
 All measured on the COR24 emulator (`cor24-emu`), not estimated.
 
-Instructions until the first UART output, for the input `7777 .`
-(source: `forth-from-forth/docs/kernel-sizes.md`, "Image boot"):
+Real work, in instructions, with every input byte handed over the moment
+the kernel polls for it, so time spent waiting for input is not counted
+(source: `web-sw-cor24-forth/tests/boot_cost.rs`, run with
+`cargo test --release --test boot_cost -- --ignored --nocapture`; counts
+are within 50 instructions):
 
-| Kernel | How the core arrives | First output at |
-|---|---|---:|
-| forth.s | all assembly | 80,000 |
-| forth-from-forth | compiled into the image | 710,000 |
-| forth-in-forth | 4 tiers over the UART | 87,440,000 |
-| forth-on-forthish | 5 tiers over the UART | 149,560,000 |
+| Kernel | Boot to the prompt | then the line `7777 .` |
+|---|---:|---:|
+| forth.s | ~100 | 13,750 |
+| forth-in-forth | 1,743,700 | 13,150 |
+| forth-on-forthish | 10,177,150 | 638,100 |
+| forth-from-forth | ~100 | 634,200 |
+
+Why each tab costs more than the last, and where tab 4's time goes:
+
+- Boot: tabs 2 and 3 compile their core from text at every start (4 and 5
+  tiers); tab 4 starts with it compiled, so boot is just `_start`.
+- Per line: tabs 3 and 4 run the same Forth, where `FIND` is a Forth walk
+  of the whole dictionary chain (~127 entries, Forth string compare) and
+  `/MOD` is a Forth repeated-subtraction loop (COR24 has no divide). A
+  number is first looked up and fails: about 140,000 instructions for `7`.
+  Printing 7777 with `.` takes about 860 trips round the `/MOD` loop:
+  about 475,000 of the 634,200. Tab 2 still has the hashed assembly `FIND`
+  and an assembly `/MOD`, hence 13,150.
+
+Earlier drafts quoted instructions to first output under `cor24-emu -u`
+(80 k, 0.71 M, 87 M, 150 M). Those are dominated by the emulator's input
+pacing: it hands over at most one byte per 10,000-instruction batch. Tab
+3's core is 14,924 bytes (x 10,000 = 149.2 M, measured 149.56 M) and tab
+2's 8,748 (87.5 M, measured 87.44 M): those figures were almost entirely
+waiting for input.
 
 In the web app, through the same UART pump the browser uses: tab 4 is ready
 after 1 pump tick, tab 3 after 74 (`web-sw-cor24-forth/tests/led_switch_demo.rs`,
@@ -55,6 +77,7 @@ Sizes (source: `kernel-sizes.md`, "Dead code removed (step 7)"):
 | forth-from-forth/kernel.s, image with bootstrap still in | 5,087 | 9,450 |
 | forth-from-forth/kernel.s, bootstrap stripped | 4,060 | 8,168 |
 | forth-from-forth/kernel.s, primitives from Forth (no template, no comments) | 3,917 | 8,168 |
+| forth-from-forth/kernel.s, FIND hash table and its upkeep removed | 3,508 | 7,098 |
 
 - Compiled core: 83 definitions (82 from the shared tiers plus a Forth
   `[']`), 2,427 lines of emitted assembly. The compiled dictionary alone
@@ -95,11 +118,12 @@ Posts: Embedded #3 (2026-04-20) and Down the Rabbit-Hole parts 2-5
   literal failed. `XC-READ-TOKEN` contains `-1`; that `-1` became a `?` and a
   missing stack item. The same bug had silently broken five tab-3 demos
   (CONSTANT, DO LOOP, IF THEN, IF ELSE, Self Test). Fix: commit `6e0aa5c`.
-- **Part 2: "phase 4 deletes the hashing subsystem."** Mostly true. The
-  assembly `FIND` that used the hash is gone from the image, because a Forth
-  `[']` replaced the last assembly caller (`8ab0170`). The hash table itself
-  is still there, unused: the assembly `CREATE` maintains it and `_start`
-  fills it. It goes when the primitives move into Forth.
+- **Part 2: "phase 4 deletes the hashing subsystem."** True. The assembly
+  `FIND` that used the hash left the image when a Forth `[']` replaced its
+  last caller (`8ab0170`). The table itself, the loop in `_start` that filled
+  it and the update in `CREATE` stayed until the primitives were Forth; then
+  deleting them was a Forth edit (259 lines of prims-asm.fth, 1,070 bytes of
+  kernel, and boot dropped from ~22,000 instructions to ~100).
 - **Part 3: replacement caches (numeric fast path, recent-hit, hot-token).**
   None were built. Boot no longer runs `FIND` over the core at all, which was
   the cost those caches targeted. Interactive `FIND` speed was not measured.
@@ -199,7 +223,9 @@ forth-from-forth/scripts/build-image.sh --check    # fail if it is stale
 - Live: https://sw-embed.github.io/web-sw-cor24-forth/ (web commit `e1f11ba`;
   footer shows build `a2caefd`). Tab 4, forth-from-forth, opens by default.
 - Try: watch the status line say Ready at once (switch to tab 3 for
-  contrast); `SEE IF`, `SEE QUIT`, `WORDS` (every word shown was compiled by
+  contrast); click **Rebuild kernel** (the running kernel compiles its own
+  kernel.s, a minute or two in the browser, then reports whether the result
+  is identical to itself, text and bytes); `SEE IF`, `SEE QUIT`, `WORDS` (every word shown was compiled by
   the Forth cross-compiler); the Loop Switch LED demo (click S2 while it
   runs); the tab's `?` bubble.
 - Also live since 2026-10-22: forth.s inside the SWTOS microkernel as a pane,
@@ -230,10 +256,14 @@ Bugs found while building this (state as of 2026-10-24):
 Open work:
 
 - Done 2026-10-24: the primitives are written in a Forth assembler
-  vocabulary (`core/prims-asm.fth`); kernel.s is byte-identical to the
-  hand-written version it replaced. Next: drop the unused FIND hash table
-  (now a Forth edit), and an instruction encoder so the image needs no
-  external assembler.
+  vocabulary (`core/prims-asm.fth`); kernel.s was byte-identical to the
+  hand-written version it replaced. The unused FIND hash table and its
+  upkeep are deleted. Tab 4 has a "Rebuild kernel" button: the running
+  kernel compiles its own kernel.s in the browser (about 1.26 G
+  instructions) and reports whether it is identical to itself.
+- Stopping point (2026-10-24): the kernel is generated from Forth down to
+  assembly text; `cor24-asm` turns the text into bytes. A Forth instruction
+  encoder could replace it later; it is not planned now.
 - `DO ?DO LOOP` and `CONSTANT`/`VARIABLE` in the cross-compiler: deferred,
   because no core tier uses them.
 - Part 5's thin second backend (one Forth source, two targets) and the
@@ -251,7 +281,7 @@ Title options:
 2. "FORTH — The Dictionary Is a Build Artifact (Part 6)"
 3. "FORTH — Six Months Stuck on a Minus Sign (Part 6)"
 4. "Embedded #4: forth-from-forth, the Kernel That Boots Already Compiled"
-5. "FORTH — 150 Million Instructions to Zero: Compiling the Core Ahead of Time"
+5. "FORTH — From Ten Million Instructions to a Hundred: Compiling the Core Ahead of Time"
 
 ## Sources
 

@@ -257,7 +257,7 @@ section("Four implementations", "in  ·  in-ish  ·  from: how much of the kerne
     ["1", "forth.s", "All-assembly kernel", C.accent1, ["3,498", "lines of asm"], ["0", "lines of Forth core"], ["~65", "asm primitives"], "Tab 1: the debugger. Runs on the FPGA board; reg-rs golden tests."],
     ["2", "forth-in-forth", "Forth in a slimmed asm host", C.accent2, ["2,720", "lines of asm"], ["276", "lines in 4 core tiers"], ["50", "asm primitives"], "Tab 2: IF, ., WORDS and SEE are Forth, loaded at boot."],
     ["3", "forth-on-forthish", "Forth on a Forth-ish substrate", C.accent3, ["2,659", "lines of asm"], ["497", "lines in 5 core tiers"], ["~22", "irreducible primitives"], "Tab 3: :, WORD, FIND, NUMBER, INTERPRET, QUIT are Forth."],
-    ["4", "forth-from-forth", "Kernel compiled by Forth", C.accent6, ["83", "definitions cross-compiled"], ["3,917", "lines of kernel.s, all from Forth"], ["0.7 M", "instructions to first output"], "Tab 4 (default): nothing streams at boot; tab 3 needs 150 M."],
+    ["4", "forth-from-forth", "Kernel compiled by Forth", C.accent6, ["83", "definitions cross-compiled"], ["3,508", "lines of kernel.s, all from Forth"], ["~100", "instructions to boot"], "Tab 4 (default): nothing to compile at boot; tab 3 needs 10 M."],
   ];
   cols.forEach((c, i) => {
     const x = 0.5 + i * 2.28, w = 2.16;
@@ -427,10 +427,10 @@ section("Four implementations", "in  ·  in-ish  ·  from: how much of the kerne
   s.addText("Shipped 2026-10-23 / 24", { x: 5.2, y: 1.85, w: 4.3, h: 0.3, fontSize: 12.5, bold: true, color: C.text1, margin: 0, isTextBox: true, objectName: "fff status caption" });
   bullets(s, 5.2, 2.17, 4.3, 3.0, [
     "All five core tiers compile from source: 83 definitions, each identical in SEE form to what tab 3 compiles at boot, and they run when linked.",
-    "Boot: first output after 0.71 M instructions against 149.56 M for tab 3, which streams and compiles its core first.",
-    "A reachability pass removes the asm bootstrap (INTERPRET, QUIT, NUMBER, WORD, FIND, : ; [']): 9,450 → 8,168 bytes.",
+    "Boot to the prompt: about 100 instructions, against 10.2 M for tab 3, which compiles its core from text first.",
+    "Gone: the asm bootstrap (INTERPRET, QUIT, NUMBER, WORD, FIND, : ; [']) and the FIND hash table: 9,450 → 7,098 bytes.",
     "Unblocked by a one-cell bug: tab 3's Forth NUMBER read the minus sign from the wrong cell, so every -1 in the compiler vanished.",
-    "Since 10-24 the primitives are Forth too (an assembler vocabulary), and the kernel rebuilds itself to the same bytes: a fixed point.",
+    "The primitives are Forth too, and the kernel rebuilds itself to the same bytes, a fixed point; tab 4's Rebuild kernel button does it in the browser.",
   ], 10);
 }
 
@@ -460,11 +460,11 @@ section("Four implementations", "in  ·  in-ish  ·  from: how much of the kerne
     "Those poll-loop labels are the one thing a new kernel must register; a headless test boots all four kernels through the pump, with a watchdog, to catch a missing one.",
   ], 10.5);
   table(s, [
-    ["Kernel", "First output at", "Core arrives"],
-    ["forth.s", "80 k", "all assembly"],
-    ["forth-from-forth", "0.71 M", "compiled into the image"],
-    ["forth-in-forth", "87 M", "4 tiers over the UART"],
-    ["forth-on-forthish", "150 M", "5 tiers over the UART"],
+    ["Kernel", "Boot: real work", "Core arrives"],
+    ["forth.s", "~100", "all assembly"],
+    ["forth-from-forth", "~100", "compiled into the image"],
+    ["forth-in-forth", "1.74 M", "4 tiers over the UART"],
+    ["forth-on-forthish", "10.2 M", "5 tiers over the UART"],
   ], 5.2, 3.35, 4.3, [1.55, 1.15, 1.6], 10, 0.3);
 }
 
@@ -475,7 +475,7 @@ section("Four implementations", "in  ·  in-ish  ·  from: how much of the kerne
   const s = content("Trade-offs between the four", "Implementations");
   table(s, [
     ["", "forth.s", "forth-in-forth", "forth-on-forthish", "forth-from-forth"],
-    ["Speed", "fastest; native compile and run", "runtime same; compile ~3× slower", "everything through Forth", "as tab 3, but boot ~200× less work"],
+    ["Speed", "fastest; native compile and run", "runtime same; compile ~3× slower", "everything through Forth", "as tab 3 per line; boot ~100 instructions"],
     ["Assembly to maintain", "~3,500 lines, every word", "~2,700 lines, 50 primitives", "~2,650 lines; ~22 matter after boot", "none as .s: primitives in a Forth assembler vocabulary"],
     ["What SEE can show", "no SEE", "IF, ., WORDS as Forth", "also :, WORD, FIND, INTERPRET", "same, all compiled ahead of time"],
     ["Retarget to a new CPU", "rewrite everything", "50 primitives + bootstrap", "~22 primitives + bootstrap", "new asm emitter + ~22 primitives"],

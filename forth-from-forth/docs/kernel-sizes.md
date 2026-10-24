@@ -75,3 +75,31 @@ the rest is the template's surviving primitives. Gone: the asm INTERPRET,
 QUIT, NUMBER, WORD, FIND, `:`, `;`, `[']` and 81 helper blocks (1,043 lines).
 Still present but unused: the FIND hash table, which CREATE maintains and
 _start fills; it goes when the primitives move into core/prims.fth.
+
+## Hash table removed (2026-10-24)
+
+With the primitives in Forth, the unused FIND hash machinery was deleted
+from `core/prims-asm.fth`: the table (768 bytes), the loop in `_start` that
+filled it, the update in `CREATE`, `compute_hash` and its cells, the
+lookaside cache cells. 259 lines.
+
+| forth-from-forth/kernel.s | lines | bytes |
+|---|---:|---:|
+| before | 3,917 | 8,168 |
+| after | 3,508 | 7,098 |
+
+## Real work per kernel (2026-10-24)
+
+Instructions with every input byte handed over as soon as the kernel polls
+for it (web-sw-cor24-forth `tests/boot_cost.rs`, 50-instruction batches):
+
+| Kernel | Boot to the prompt | `7777 .` |
+|---|---:|---:|
+| forth.s | ~100 | 13,750 |
+| forth-in-forth | 1,743,700 | 13,150 |
+| forth-on-forthish | 10,177,150 | 638,100 |
+| forth-from-forth | ~100 | 634,200 |
+
+The "Image boot" table above measured first output under `cor24-emu -u`,
+which hands over at most one input byte per 10,000-instruction batch; for
+the kernels that stream their core, that pacing is most of the count.
