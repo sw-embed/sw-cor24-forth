@@ -884,7 +884,8 @@ VARIABLE xc-prev-entry
 \   - XC-COPY-COUNTED dups WORD's transient buffer to HERE.
 \   - XC-COMPILE-NAME-BYTES emits ".byte" header bytes.
 \   - XC-READ-TOKEN, XC-IS-SEMI? work in isolation.
-\ Step 010 picks up the integration debug.
+\ Resolved 2026-10-23: the failure was phase-3 NUMBER rejecting -1;
+\ see docs/parser-debug-notes.md "Resolution".
 : XC-COMPILE-ENTRY
   XC-READ-TOKEN
   XC-COPY-COUNTED

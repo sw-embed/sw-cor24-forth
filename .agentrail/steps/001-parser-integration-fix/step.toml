@@ -1,6 +1,6 @@
 number = 1
 slug = "parser-integration-fix"
-status = "pending"
+status = "in-progress"
 description = "Fix the forth-from-forth parser integration bug so source-driven compilation ..."
 role = "production"
 context_files = []

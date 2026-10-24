@@ -122,9 +122,10 @@ pres.addSection({ title: "Intro" });
 {
   const s = pres.addSlide({ masterName: "DARK_TITLE", sectionTitle: "Intro" });
   s.addText("Forth on COR24", { placeholder: "title" });
-  s.addText("Three Forth kernels for a 24-bit soft CPU: all assembly, Forth-in-Forth, and Forth on a Forth-shaped substrate", { placeholder: "body" });
+  s.addText("Forth kernels for a 24-bit soft CPU: all assembly, Forth-in-Forth, Forth on a Forth-shaped substrate, and a fourth, compiled by Forth, in progress", { placeholder: "body" });
   codeBox(s, 0.6, 3.75, 5.2, 1.1, [": SQUARE  DUP * ;", "  ok", "5 SQUARE .", "25  ok"], 12);
-  s.addText("sw-embed  ·  October 2026  ·  sw-embed.github.io/web-sw-cor24-forth", { x: 0.6, y: 5.0, w: 8.8, h: 0.3, fontSize: 11, color: C.accent5, margin: 0, isTextBox: true, objectName: "title footer" });
+  s.addText("Mike Wright", { x: 0.6, y: 4.95, w: 4.0, h: 0.3, fontSize: 14, bold: true, color: C.background1, margin: 0, isTextBox: true, objectName: "title author" });
+  s.addText("2026 October 23  ·  sw-embed.github.io/web-sw-cor24-forth", { x: 4.6, y: 4.95, w: 4.8, h: 0.3, fontSize: 11, color: C.accent5, margin: 0, align: "right", valign: "middle", isTextBox: true, objectName: "title footer" });
   s.addNotes("Deck covers the COR24 target and its ISA limits, the three Forth implementations in sw-cor24-forth, how they compare with other Forths, the demo set in the web UI, and the everyday workflow of defining, listing, running and redefining words.");
 }
 
@@ -271,7 +272,7 @@ section("Three implementations", "in  ·  in-ish  ·  from: how much of the kern
     });
     s.addText(c[7], { x: x + 0.16, y: 3.7, w: w - 0.32, h: 0.78, fontSize: 10.5, color: C.text1, margin: 0, valign: "top", isTextBox: true, objectName: name("kernel blurb") });
   });
-  s.addText("4  forth-from-forth (phase 4, in progress): a cross-compiler written in Forth emits the kernel .s, so no hand-written assembly remains. Retargeting becomes a new asm-emit module.", { x: 0.5, y: 4.7, w: 9.0, h: 0.45, fontSize: 11, color: C.accent2, margin: 0, isTextBox: true, objectName: "phase 4 note" });
+  s.addText("4  forth-from-forth (phase 4, work in progress, two slides on): a cross-compiler written in Forth emits the kernel .s, so no hand-written assembly remains. Retargeting becomes a new asm-emit module.", { x: 0.5, y: 4.7, w: 9.0, h: 0.45, fontSize: 11, color: C.accent2, margin: 0, isTextBox: true, objectName: "phase 4 note" });
 }
 
 // ============================================================
@@ -395,6 +396,33 @@ section("Three implementations", "in  ·  in-ish  ·  from: how much of the kern
     "Honest number: kernel.s is still 2,659 lines. The asm bootstrap must compile runtime.fth before Forth : exists, so the asm WORD / FIND / NUMBER bodies stay alive. Deleting them needs a precompiled image: that is phase 4.",
     "Cost: Fibonacci needs an 800 M instruction budget; stack ops via SP@ are several times slower than push / pop.",
   ], 10.5);
+}
+
+// ============================================================
+// 12b. forth-from-forth: work in progress
+// ============================================================
+{
+  const s = content("forth-from-forth: the kernel as a build artifact (WIP)", "Implementations");
+  // pipeline
+  const y = 1.05, h = 0.62;
+  flowBox(s, 0.5, y, 1.9, h, "xcomp.fth + prims.fth\n(the compiler, in Forth)", C.accent1, C.background1, 9.5);
+  arrow(s, 2.45, y + 0.16, 0.25, 0.3);
+  flowBox(s, 2.75, y, 1.75, h, "core/*.fth\nread as source", C.accent2, C.background1, 9.5);
+  arrow(s, 4.55, y + 0.16, 0.25, 0.3);
+  flowBox(s, 4.85, y, 1.9, h, "runs on the phase-3 REPL,\nasm text out the UART", C.accent2, C.background1, 9.5);
+  arrow(s, 6.8, y + 0.16, 0.25, 0.3);
+  flowBox(s, 7.1, y, 2.4, h, "kernel.s → cor24-asm → image boot,\nno UART bootstrap", C.text1, C.background1, 9.5);
+  codeBox(s, 0.5, 1.85, 4.4, 1.5, [
+    "XC-COMPILE-TEST : FOO SP@ @ ;", "fff_e_1:", ".word 0", ".byte 3", ".byte 70   ; F O O ...", "fff_c_1:", ".word do_docol_far   ; far CFA prelude", ".word do_sp_fetch  .word do_fetch  .word do_exit",
+  ], 9);
+  s.addText("Status on 2026-10-23", { x: 5.2, y: 1.85, w: 4.3, h: 0.3, fontSize: 12.5, bold: true, color: C.text1, margin: 0, isTextBox: true, objectName: "fff status caption" });
+  bullets(s, 5.2, 2.17, 4.3, 3.0, [
+    "Works: the compiler emits the whole runtime.fth tier (DUP through :, ;) and a self-test image runs that dictionary.",
+    "Was stuck since April: compiling a definition from source died right after the begin marker. Found today: the phase-3 Forth NUMBER read its sign byte from the wrong cell, so every -1 in the compiler became a ? and a missing stack item. With that fixed, : FOO SP@ @ ; compiles from source (left).",
+    "Not yet: the other four tiers, the primitive declarations, an _start that boots from the image, deleting the asm bootstrap. kernel.s is still a copy of forth-on-forthish.",
+    "Tracked as saga phase-4-tab-4: eight steps ending in a fourth web tab, a blog brief and this deck updated.",
+  ], 10);
+  s.addText("Why bother: no hand-written assembly left; retargeting to another CPU means a new asm-emit module, not a new kernel. The April blog posts (Rabbit-hole parts 2 to 5) planned this: FIND's hash goes away, forward references become linker-style fixups.", { x: 0.5, y: 3.5, w: 4.4, h: 1.6, fontSize: 10.5, italic: true, color: C.accent2, margin: 0, isTextBox: true, objectName: "fff why" });
 }
 
 // ============================================================
@@ -537,10 +565,10 @@ pres.addSection({ title: "Working with words" });
 {
   const s = content("Known quirks and open items", "Working with words");
   const rows = [
-    ["!", "forth-on-forthish rejects negative literals", "Its Forth NUMBER has no sign handling, so -1 and -65280 print ?. CONSTANT, DO LOOP, IF THEN, IF ELSE and Self Test fail on tab 3; the headless test pins them as known-broken until fixed.", C.accent3],
+    ["!", "Fixed today: forth-on-forthish rejected negative literals", "Its Forth NUMBER read the minus sign from the wrong stack cell, so -1 printed ? and left the stack short. Fixed 2026-10-23 in core/highlevel.fth; the tab 3 demos it broke (CONSTANT, DO LOOP, IF THEN, IF ELSE, Self Test) return with the next web build.", C.accent6],
     ["0", "LED! and SW? are raw active-low bits", "0 LED! lights D2 and SW? returns 0 while pressed. The Help text still says non-zero on and -1 pressed; one of the two should change.", C.accent1],
     ["F", "FORGET exists only on forth.s", "Tabs 2 and 3 redefine by shadowing; reclaiming dictionary space means Reset.", C.accent2],
-    ["T", "Test suite drift", "The reg-rs suite in sw-cor24-forth still names the retired cor24-run binary; the two new switch tests use cor24-asm + cor24-emu. The web help doc test lists 12 kernel words with no reference entry.", C.accent4],
+    ["T", "Test loose ends", "The 83-test reg-rs suite passes, but the 600 M-instruction stack-leak test can time out under --parallel and passes alone. The web help doc test lists 12 kernel words with no reference entry.", C.accent4],
   ];
   rows.forEach((r, i) => {
     const y = 1.0 + i * 1.02;

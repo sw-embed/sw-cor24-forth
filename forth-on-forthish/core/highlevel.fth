@@ -97,9 +97,9 @@
   DUP C@
   DUP 0= IF 2DROP 0 -1 EXIT THEN
   SWAP 1 +
-  1 >R                                   \ RS: sign=1
-  OVER C@ 45 = IF
-    R> DROP -1 >R                        \ sign=-1
+  0 >R                                   \ RS: negative?=0
+  DUP C@ 45 = IF
+    R> DROP -1 >R                        \ negative?=-1
     1 + SWAP 1 - SWAP
     OVER 0= IF 2DROP R> DROP 0 -1 EXIT THEN
   THEN
@@ -115,7 +115,7 @@
     THEN
   REPEAT
   2DROP
-  R> R> *
+  R> R> IF NEGATE THEN
   0
 ;
 

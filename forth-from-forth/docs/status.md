@@ -1,55 +1,39 @@
 # Status — forth-from-forth
 
-Last updated: 2026-04-23 (step 002 scaffold)
+Last updated: 2026-10-23.
 
-Authoritative step state: `agentrail status`.
+Authoritative step state: `agentrail status` (saga `phase-4-tab-4`).
+The first phase-4 saga, `phase-4-forth-from-forth`, is archived in
+`.agentrail-archive/`; its steps 016-020 were never started and are
+superseded by the current saga.
 
-## Progress
+## Where it stands
 
-| Step | Description | State | Commit |
-|------|-------------|-------|--------|
-| 001 | design — pure-Forth cross-compiler, no hash initially | done | e1e4044 |
-| 002 | scaffold — `forth-from-forth/` verbatim copy of phase 3 | done | *current* |
-| 003 | compiler MVP (runtime.fth only) | pending | — |
-| 004 | boot into runtime-only image | pending | — |
-| 005 | compiler full core | pending | — |
-| 006 | pure-image boot | pending | — |
-| 007 | delete-validation | pending | — |
-| 008 | re-baseline reg-rs | pending | — |
-| 009 | phase-4 wrap | pending | — |
+| Piece | State |
+|---|---|
+| Cross-compiler `compiler/xcomp.fth` | Emits the whole `runtime.fth` tier from a hand-listed sequence (`COMPILE-RUNTIME`); self-test image runs it (`scripts/test-kernel.sh`). |
+| Source-driven parser | Works for one colon definition (`XC-COMPILE-TEST`) since the phase-3 NUMBER fix of 2026-10-23. See `parser-debug-notes.md`, "Resolution". |
+| Other four core tiers | Not compiled yet (saga step 003). |
+| `core/prims.fth` primitive declarations | Stub (saga step 004). |
+| Image boot, no UART bootstrap | Not started (saga step 004). |
+| `kernel.s` | Still a copy of `../forth-on-forthish/kernel.s`. |
+| Web tab 4 | Not started (saga step 006). |
 
-## Starting state (step 002)
+## Saga phase-4-tab-4
 
-`forth-from-forth/` is a verbatim copy of `forth-on-forthish/`:
+1. parser-integration-fix — done 2026-10-23 (negative-literal NUMBER bug)
+2. compile-runtime-from-source
+3. compile-full-core
+4. prims-and-image-boot
+5. delete-bootstrap-and-rebaseline
+6. web-tab-4 (web-sw-cor24-forth)
+7. blog-brief
+8. deck-update
 
-- `kernel.s`: 2659 asm lines, byte-identical to
-  `../forth-on-forthish/kernel.s`.
-- `core/*.fth`: five tiers, byte-identical to
-  `../forth-on-forthish/core/*.fth`.
-- `scripts/*.sh`: four shell scripts with comments updated to
-  mention `forth-from-forth` instead of `forth-on-forthish`;
-  internal variable names unchanged.
-- `compiler/xcomp.fth`: empty shell (one comment line).
-- `core/prims.fth`: empty shell (one comment line).
-- `docs/*.md`: design, prd, architecture, plan, this file.
+## Done in the archived saga (2026-04-22 to 2026-04-26)
 
-`scripts/demo.sh examples/14-fib.fth` produces identical fib
-output to the phase-3 demo: `1 1 2 3 5 8 13 21 34 55 89`.
-
-`reg-rs/tf24a_fff_fib` baseline captured against this copy;
-it will be re-baselined once the compiler starts modifying
-kernel.s.
-
-## Line counts
-
-| File | Now (step 002) | Target (end phase 4) |
-|------|---------------:|---------------------:|
-| `kernel.s` (generated) | 2659 | ≤ 2000 |
-| `core/*.fth` | 450 | 450 (unchanged) |
-| `compiler/xcomp.fth` | 1 (stub) | ≤ 500 |
-| `core/prims.fth` | 1 (stub) | ~400 |
-
-## Next action
-
-Step 003 — build compiler MVP targeting `runtime.fth` only.
-Run `agentrail next` to start.
+Design (pure-Forth cross-compiler, no hash), scaffold, compiler MVP,
+emission of all runtime.fth definitions as COR24 asm, a runnable
+self-test, the symbol table and dynamic-label machinery for the
+parser, plus GH #3 words in the layered kernels (`:NONAME`, `?DUP`,
+`MIN`, `MAX`, comparisons, `RECURSE`, `ROLL`, `J`).

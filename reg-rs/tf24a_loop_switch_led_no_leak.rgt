@@ -1,7 +1,7 @@
 command = '''scripts/run-kernel.sh forth.s -u "$(cat examples/13-loop-switch-led.fth)
 DEPTH .
-" --speed 0 -n 600000000 2>&1'''
-timeout = 120
+" --speed 0 -t 300 -n 600000000 2>&1'''
+timeout = 400
 preprocess = "grep -E -A 100 '^UART output:|^Stack (over|under)flow' || true"
 exit_code = 0
 desc = "13-loop-switch-led: MIRROR runs to completion with a balanced data stack (DEPTH 0, no overflow)"

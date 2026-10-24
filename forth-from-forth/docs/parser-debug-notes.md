@@ -86,3 +86,34 @@ Saga step 012 (parser-integration-debug) marked complete with
 reward 0 (continued investigation needed). The infrastructure
 remains useful for the eventual fix; the integration bug is
 real and reproducible but not yet diagnosed.
+
+## Resolution (2026-10-23, saga phase-4-tab-4 step 001)
+
+The bug was not in xcomp.fth. It was hypothesis 5: the phase-3 Forth
+`NUMBER` in `core/highlevel.fth` mishandled negative literals.
+
+After `SWAP 1 +` the stack is `( len ptr )`, but the sign check read
+`OVER C@`, the first byte at *len* rather than at *ptr*. So the `-`
+was never seen, the digit loop hit the `-` character, and NUMBER
+returned failure. INTERPRET printed `?` and, in compile mode, compiled
+nothing for the literal. Every `-1` in xcomp.fth (for example
+`0= IF DROP 0 ELSE -1 THEN` in XC-READ-TOKEN) silently became a
+missing stack item, so the loops consumed the wrong values and the
+compiler died right after `!!BEGIN-KERNEL!!`. The `? ?` markers seen
+during core loading were the same bug hitting literals in the core
+tiers.
+
+Fix, applied to both forth-on-forthish and forth-from-forth core
+files: test the sign with `DUP C@ 45 =`, keep a negative flag on the
+return stack instead of a ±1 multiplier, and finish with
+`IF NEGATE THEN`. (The old `R> R> *` would also have been slow: phase-3
+`*` is a repeated-addition loop and loops ~16 M times on -1.)
+
+Verified: `XC-COMPILE-TEST : FOO SP@ @ ;` now emits a complete
+`fff_e_1` / `fff_c_1` block (locked by `reg-rs/tf24a_fff_xc_compile_test`),
+and `reg-rs/tf24a_fof_negative_literals` locks `-1`, `-65280`,
+`HEX -FF`, a negative literal inside a colon definition, and stack
+balance.
+
+Known, unrelated: DIGIT-VALUE does not check BASE, so `abc` parses as
+1122 in decimal. Not fixed here.

@@ -1,0 +1,8 @@
+command = """
+scripts/run-kernel.sh forth-on-forthish/kernel.s -u "$(cat forth-from-forth/core/runtime.fth forth-from-forth/core/minimal.fth forth-from-forth/core/lowlevel.fth forth-from-forth/core/midlevel.fth forth-from-forth/core/highlevel.fth forth-from-forth/compiler/xcomp.fth)
+XC-COMPILE-TEST : FOO SP@ @ ;
+" --speed 0 -t 300 -n 900000000 2>&1"""
+timeout = 400
+preprocess = "sed -n '/^!!BEGIN-KERNEL!!/,/^!!END-KERNEL!!/p' || true"
+exit_code = 0
+desc = "forth-from-forth cross-compiler compiles one colon definition from source"
