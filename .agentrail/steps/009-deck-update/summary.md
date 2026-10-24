@@ -1,0 +1,1 @@
+Deck updated to four kernels: four-card overview with measured numbers, forth-from-forth slide shows the shipped state and a real emitted entry, boot table for all four, trade-offs fourth column, demo table, quirks refreshed, title/agenda/closing. Validated, every changed slide inspected, three overflows fixed. Copied to web-sw-cor24-forth/docs.
