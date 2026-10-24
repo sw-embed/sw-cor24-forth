@@ -19,6 +19,13 @@ generated kernel.s has no assembly template behind it. That vocabulary
 prints assembler text that cor24-asm still assembles; there is no Forth
 instruction encoder yet.
 
+**Fixed point (2026-10-24).** The compiler normally runs on forth-on-forthish's
+hand-written kernel. Run instead on forth-from-forth's own kernel, it
+reproduces forth-from-forth's kernel.s exactly, byte for byte of the text.
+The hand-written kernel was only needed to start the chain. Locked by reg-rs
+`tf24a_fff_fixed_point`; reproduce with
+`XC_HOST=forth-from-forth/kernel.s forth-from-forth/scripts/build-image.sh --check`.
+
 ## 2. Numbers
 
 All measured on the COR24 emulator (`cor24-emu`), not estimated.

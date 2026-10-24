@@ -22,7 +22,7 @@ set -f
 HERE="$(cd "$(dirname "$0")" && pwd)"
 FFF="$(cd "$HERE/.." && pwd)"
 ROOT="$(cd "$FFF/.." && pwd)"
-HOST="$ROOT/forth-on-forthish/kernel.s"
+HOST="${XC_HOST:-$ROOT/forth-on-forthish/kernel.s}"   # XC_HOST: run the compiler on another kernel
 OUT="$FFF/kernel.s"
 WORK="$(mktemp -d -t build-image)"; trap 'rm -rf "$WORK"' EXIT
 cd "$ROOT"

@@ -1,0 +1,5 @@
+command = 'h=$(mktemp -t fff-host).s && cp forth-from-forth/kernel.s "$h" && XC_HOST="$h" forth-from-forth/scripts/build-image.sh --check 2>&1; rm -f "$h"'
+timeout = 900
+preprocess = "cat"
+exit_code = 0
+desc = "self-hosting fixed point: forth-from-forth runs its own cross-compiler on its own sources and reproduces its kernel.s exactly"

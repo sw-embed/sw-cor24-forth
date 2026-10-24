@@ -257,7 +257,7 @@ section("Four implementations", "in  ·  in-ish  ·  from: how much of the kerne
     ["1", "forth.s", "All-assembly kernel", C.accent1, ["3,498", "lines of asm"], ["0", "lines of Forth core"], ["~65", "asm primitives"], "Tab 1: the debugger. Runs on the FPGA board; reg-rs golden tests."],
     ["2", "forth-in-forth", "Forth in a slimmed asm host", C.accent2, ["2,720", "lines of asm"], ["276", "lines in 4 core tiers"], ["50", "asm primitives"], "Tab 2: IF, ., WORDS and SEE are Forth, loaded at boot."],
     ["3", "forth-on-forthish", "Forth on a Forth-ish substrate", C.accent3, ["2,659", "lines of asm"], ["497", "lines in 5 core tiers"], ["~22", "irreducible primitives"], "Tab 3: :, WORD, FIND, NUMBER, INTERPRET, QUIT are Forth."],
-    ["4", "forth-from-forth", "Dictionary compiled by Forth", C.accent6, ["83", "definitions cross-compiled"], ["4,060", "lines of generated kernel.s"], ["0.7 M", "instructions to first output"], "Tab 4 (default): nothing streams at boot; tab 3 needs 150 M."],
+    ["4", "forth-from-forth", "Kernel compiled by Forth", C.accent6, ["83", "definitions cross-compiled"], ["3,917", "lines of kernel.s, all from Forth"], ["0.7 M", "instructions to first output"], "Tab 4 (default): nothing streams at boot; tab 3 needs 150 M."],
   ];
   cols.forEach((c, i) => {
     const x = 0.5 + i * 2.28, w = 2.16;
@@ -273,7 +273,7 @@ section("Four implementations", "in  ·  in-ish  ·  from: how much of the kerne
     });
     s.addText(c[7], { x: x + 0.14, y: 3.85, w: w - 0.28, h: 0.75, fontSize: 10, color: C.text1, margin: 0, valign: "top", isTextBox: true, objectName: name("kernel blurb") });
   });
-  s.addText("Tab 4's primitives still come from tab 3's hand-written assembly; the dictionary on top of them is generated. Emitting the primitives from Forth too is the next step.", { x: 0.5, y: 4.8, w: 9.0, h: 0.4, fontSize: 10.5, color: C.accent2, margin: 0, isTextBox: true, objectName: "phase 4 note" });
+  s.addText("Tab 4's kernel.s is generated entirely from Forth, primitives included, and reproduces itself: run on tab 4's own kernel, the compiler emits the same kernel.s byte for byte.", { x: 0.5, y: 4.8, w: 9.0, h: 0.4, fontSize: 10.5, color: C.accent2, margin: 0, isTextBox: true, objectName: "phase 4 note" });
 }
 
 // ============================================================
@@ -405,11 +405,11 @@ section("Four implementations", "in  ·  in-ish  ·  from: how much of the kerne
 {
   const s = content("forth-from-forth (tab 4): compiled by Forth", "Implementations");
   const y = 1.05, h = 0.62;
-  flowBox(s, 0.5, y, 1.9, h, "xcomp.fth + prims.fth\n(the compiler, in Forth)", C.accent1, C.background1, 10);
+  flowBox(s, 0.5, y, 1.9, h, "xcomp.fth + prims-asm.fth\n(compiler + primitives, Forth)", C.accent1, C.background1, 10);
   arrow(s, 2.45, y + 0.16, 0.25, 0.3);
   flowBox(s, 2.75, y, 1.75, h, "core/*.fth\nread as source", C.accent2, C.background1, 10);
   arrow(s, 4.55, y + 0.16, 0.25, 0.3);
-  flowBox(s, 4.85, y, 1.9, h, "runs on tab 3's kernel,\nasm text out the UART", C.accent2, C.background1, 10);
+  flowBox(s, 4.85, y, 1.9, h, "runs on tab 3's kernel or\ntab 4's own; asm text out", C.accent2, C.background1, 10);
   arrow(s, 6.8, y + 0.16, 0.25, 0.3);
   flowBox(s, 7.1, y, 2.4, h, "kernel.s = primitives + dictionary;\nboots straight into QUIT", C.text1, C.background1, 10);
   s.addText("What the compiler emits for : R@ RP@ 3 + @ ;", { x: 0.5, y: 1.85, w: 4.4, h: 0.3, fontSize: 11, bold: true, color: C.text1, margin: 0, isTextBox: true, objectName: "emit caption" });
@@ -430,7 +430,7 @@ section("Four implementations", "in  ·  in-ish  ·  from: how much of the kerne
     "Boot: first output after 0.71 M instructions against 149.56 M for tab 3, which streams and compiles its core first.",
     "A reachability pass removes the asm bootstrap (INTERPRET, QUIT, NUMBER, WORD, FIND, : ; [']): 9,450 → 8,168 bytes.",
     "Unblocked by a one-cell bug: tab 3's Forth NUMBER read the minus sign from the wrong cell, so every -1 in the compiler vanished.",
-    "Next: the primitives themselves from core/prims.fth.",
+    "Since 10-24 the primitives are Forth too (an assembler vocabulary), and the kernel rebuilds itself to the same bytes: a fixed point.",
   ], 10);
 }
 
@@ -476,7 +476,7 @@ section("Four implementations", "in  ·  in-ish  ·  from: how much of the kerne
   table(s, [
     ["", "forth.s", "forth-in-forth", "forth-on-forthish", "forth-from-forth"],
     ["Speed", "fastest; native compile and run", "runtime same; compile ~3× slower", "everything through Forth", "as tab 3, but boot ~200× less work"],
-    ["Assembly to maintain", "~3,500 lines, every word", "~2,700 lines, 50 primitives", "~2,650 lines; ~22 matter after boot", "the primitives only; dictionary generated"],
+    ["Assembly to maintain", "~3,500 lines, every word", "~2,700 lines, 50 primitives", "~2,650 lines; ~22 matter after boot", "none as .s: primitives in a Forth assembler vocabulary"],
     ["What SEE can show", "no SEE", "IF, ., WORDS as Forth", "also :, WORD, FIND, INTERPRET", "same, all compiled ahead of time"],
     ["Retarget to a new CPU", "rewrite everything", "50 primitives + bootstrap", "~22 primitives + bootstrap", "new asm emitter + ~22 primitives"],
     ["Bootstrap risk", "none", "tier order matters", "asm loop must compile Forth : first", "none at run time; the compiler carries it"],
