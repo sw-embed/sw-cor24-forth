@@ -125,7 +125,7 @@ pres.addSection({ title: "Intro" });
   s.addText("Forth kernels for a 24-bit soft CPU: all assembly, Forth-in-Forth, Forth on a Forth-shaped substrate, and a fourth, compiled by Forth, in progress", { placeholder: "body" });
   codeBox(s, 0.6, 3.75, 5.2, 1.1, [": SQUARE  DUP * ;", "  ok", "5 SQUARE .", "25  ok"], 12);
   s.addText("Mike Wright", { x: 0.6, y: 4.95, w: 4.0, h: 0.3, fontSize: 14, bold: true, color: C.background1, margin: 0, isTextBox: true, objectName: "title author" });
-  s.addText("2026 October 23  ·  sw-embed.github.io/web-sw-cor24-forth", { x: 4.6, y: 4.95, w: 4.8, h: 0.3, fontSize: 11, color: C.accent5, margin: 0, align: "right", valign: "middle", isTextBox: true, objectName: "title footer" });
+  s.addText("2026 October 24  ·sw-embed.github.io/web-sw-cor24-forth", { x: 4.6, y: 4.95, w: 4.8, h: 0.3, fontSize: 11, color: C.accent5, margin: 0, align: "right", valign: "middle", isTextBox: true, objectName: "title footer" });
   s.addNotes("Deck covers the COR24 target and its ISA limits, the three Forth implementations in sw-cor24-forth, how they compare with other Forths, the demo set in the web UI, and the everyday workflow of defining, listing, running and redefining words.");
 }
 
