@@ -120,45 +120,6 @@ STR: label-exit  7 C,
 STR: label-lit  6 C,
   100 C, 111 C, 95 C, 108 C, 105 C, 116 C,
 
-\ "do_sp_fetch" — 11 chars
-STR: label-sp-fetch  11 C,
-  100 C, 111 C, 95 C, 115 C, 112 C, 95 C,
-  102 C, 101 C, 116 C, 99 C, 104 C,
-
-\ "do_sp_store" — 11 chars
-STR: label-sp-store  11 C,
-  100 C, 111 C, 95 C, 115 C, 112 C, 95 C,
-  115 C, 116 C, 111 C, 114 C, 101 C,
-
-\ "do_rp_fetch" — 11 chars
-STR: label-rp-fetch  11 C,
-  100 C, 111 C, 95 C, 114 C, 112 C, 95 C,
-  102 C, 101 C, 116 C, 99 C, 104 C,
-
-\ "do_tor" — 6 chars
-STR: label-tor  6 C,
-  100 C, 111 C, 95 C, 116 C, 111 C, 114 C,
-
-\ "do_rfrom" — 8 chars
-STR: label-rfrom  8 C,
-  100 C, 111 C, 95 C, 114 C, 102 C, 114 C, 111 C, 109 C,
-
-\ "do_fetch" — 8 chars
-STR: label-fetch  8 C,
-  100 C, 111 C, 95 C, 102 C, 101 C, 116 C, 99 C, 104 C,
-
-\ "do_store" — 8 chars
-STR: label-store  8 C,
-  100 C, 111 C, 95 C, 115 C, 116 C, 111 C, 114 C, 101 C,
-
-\ "do_plus" — 7 chars
-STR: label-plus  7 C,
-  100 C, 111 C, 95 C, 112 C, 108 C, 117 C, 115 C,
-
-\ "do_nand" — 7 chars
-STR: label-nand  7 C,
-  100 C, 111 C, 95 C, 110 C, 97 C, 110 C, 100 C,
-
 \ ============================================================
 \ Forth-def entry labels (link chain + reference targets)
 \ ============================================================
@@ -168,47 +129,6 @@ STR: label-nand  7 C,
 \ ============================================================
 \ Additional primitive labels needed for - : ; defs
 \ ============================================================
-
-\ "do_create" — 9 chars
-STR: label-create  9 C,
-  100 C, 111 C, 95 C,
-  99 C, 114 C, 101 C, 97 C, 116 C, 101 C,
-
-\ "do_comma_docol" — 14 chars
-STR: label-comma-docol  14 C,
-  100 C, 111 C, 95 C,
-  99 C, 111 C, 109 C, 109 C, 97 C, 95 C,
-  100 C, 111 C, 99 C, 111 C, 108 C,
-
-\ "do_latest" — 9 chars
-STR: label-latest  9 C,
-  100 C, 111 C, 95 C,
-  108 C, 97 C, 116 C, 101 C, 115 C, 116 C,
-
-\ "do_rbrac" — 8 chars
-STR: label-rbrac  8 C,
-  100 C, 111 C, 95 C,
-  114 C, 98 C, 114 C, 97 C, 99 C,
-
-\ "do_state" — 8 chars
-STR: label-state  8 C,
-  100 C, 111 C, 95 C,
-  115 C, 116 C, 97 C, 116 C, 101 C,
-
-\ "do_cfetch" — 9 chars
-STR: label-cfetch  9 C,
-  100 C, 111 C, 95 C,
-  99 C, 102 C, 101 C, 116 C, 99 C, 104 C,
-
-\ "do_cstore" — 9 chars
-STR: label-cstore  9 C,
-  100 C, 111 C, 95 C,
-  99 C, 115 C, 116 C, 111 C, 114 C, 101 C,
-
-\ "do_comma" — 8 chars
-STR: label-comma  8 C,
-  100 C, 111 C, 95 C,
-  99 C, 111 C, 109 C, 109 C, 97 C,
 
 \ ============================================================
 \ Additional Forth-def labels for -, :, ;
