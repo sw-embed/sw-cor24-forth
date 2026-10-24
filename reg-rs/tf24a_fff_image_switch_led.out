@@ -1,4 +1,4 @@
-Loaded 9450 bytes from /var/folders/wm/4h2wt33j4sv97l8098515h1h0000gn/T/run-kernel.bq85RphPql/kernel.lgo
+Loaded 8704 bytes from /var/folders/wm/4h2wt33j4sv97l8098515h1h0000gn/T/run-kernel.idO8ThS9h0/kernel.lgo
 [UART RX] '\'  (0x5C)
 [UART RX] ' '  (0x20)
 [UART RX] 'M'  (0x4D)
@@ -453,10 +453,10 @@ Loaded 9450 bytes from /var/folders/wm/4h2wt33j4sv97l8098515h1h0000gn/T/run-kern
 [UART RX] ';'  (0x3B)
 [UART RX] '\n'
 [UART RX] ':'  (0x3A)
-[UART TX @ 6550000] ' '  (0x20)
-[UART TX @ 6550000] 'o'  (0x6F)
-[UART TX @ 6550000] 'k'  (0x6B)
-[UART TX @ 6550000] '\n'
+[UART TX @ 6540000] ' '  (0x20)
+[UART TX @ 6540000] 'o'  (0x6F)
+[UART TX @ 6540000] 'k'  (0x6B)
+[UART TX @ 6540000] '\n'
 [UART RX] ' '  (0x20)
 [UART RX] 'M'  (0x4D)
 [UART RX] 'I'  (0x49)
@@ -532,10 +532,10 @@ Loaded 9450 bytes from /var/folders/wm/4h2wt33j4sv97l8098515h1h0000gn/T/run-kern
 [UART RX] ';'  (0x3B)
 [UART RX] '\n'
 [UART RX] 'M'  (0x4D)
-[UART TX @ 8540000] ' '  (0x20)
-[UART TX @ 8540000] 'o'  (0x6F)
-[UART TX @ 8540000] 'k'  (0x6B)
-[UART TX @ 8540000] '\n'
+[UART TX @ 8510000] ' '  (0x20)
+[UART TX @ 8510000] 'o'  (0x6F)
+[UART TX @ 8510000] 'k'  (0x6B)
+[UART TX @ 8510000] '\n'
 [UART RX] 'I'  (0x49)
 [UART RX] 'R'  (0x52)
 [UART RX] 'R'  (0x52)
@@ -543,13 +543,13 @@ Loaded 9450 bytes from /var/folders/wm/4h2wt33j4sv97l8098515h1h0000gn/T/run-kern
 [UART RX] 'R'  (0x52)
 [UART RX] '\n'
 [S2 @ 20000000] pressed
-[LED @ 20050000] 0x00 (D2 on)
+[LED @ 20020000] 0x00 (D2 on)
 [S2 @ 30000000] released
-[LED @ 30020000] 0x01 (D2 off)
+[LED @ 30070000] 0x01 (D2 off)
 [S2 @ 40000000] pressed
-[LED @ 40060000] 0x00 (D2 on)
+[LED @ 40030000] 0x00 (D2 on)
 [S2 @ 50000000] released
-[LED @ 50030000] 0x01 (D2 off)
+[LED @ 50080000] 0x01 (D2 off)
 
 UART output:  ok
  ok
