@@ -1,0 +1,1 @@
+Tab 4 (forth-from-forth) live at sw-embed.github.io/web-sw-cor24-forth as the default tab (web e1f11ba). Boots in 1 pump tick vs 74 for tab 3; all demos clean on 4 kernels. Also fixed tab 1 (pump lacked io_key_poll after the forth.s layer split), added a test watchdog, emptied KNOWN_BROKEN, documented 12 words; cargo test green.
