@@ -29,7 +29,9 @@ call it), collects the body up to `;`, reads one more token to see whether it
 is `IMMEDIATE`, and only then emits the entry. The header byte is emitted last
 because the assembler has no equates to patch it afterwards. `\` and `(`
 comments are skipped, numbers (including negative ones) become `LIT n`, and
-`['] X` becomes `LIT <X's label>`. A token it cannot resolve is emitted as a
+`['] X` becomes `LIT <X's label>`. `IF ELSE THEN BEGIN UNTIL AGAIN WHILE
+REPEAT` lay down `BRANCH`/`0BRANCH` with byte offsets computed from the body
+buffer, keeping open positions on the data stack as a running Forth does. A token it cannot resolve is emitted as a
 `; ? TOKEN` comment so the build shows it.
 
 Each entry looks like this, for `: R@ RP@ 3 + @ ;`:
@@ -58,14 +60,16 @@ kept, anything else becomes `_<code>` (`R@` is `R_64`, `-` is `_45`).
 
 ## Not yet
 
-Control flow (`IF`, `BEGIN`, `DO` and friends need branch offsets),
-`CONSTANT`/`VARIABLE`, the primitive bodies themselves, and booting a kernel
+`DO ?DO LOOP`, `CONSTANT`/`VARIABLE`, the primitive bodies themselves, and booting a kernel
 from the emitted image. See `../docs/status.md`.
 
 ## Tests
 
 - `reg-rs/tf24a_fff_selftest` — runs the emitted runtime.fth dictionary.
 - `reg-rs/tf24a_fff_xc_compile_test` — compiles `tests/features.fth`.
+- `reg-rs/tf24a_fff_xc_control_flow` — `tests/compare-see.sh tests/control.fth`:
+  every definition must match, in `SEE` form, what the phase-3 kernel
+  compiles from the same source. Use the same script for any new construct.
 
 Never put a backslash followed by n, r, t, x or 0 in any file sent through
 `cor24-emu -u`, comments included: the emulator turns it into a control byte.

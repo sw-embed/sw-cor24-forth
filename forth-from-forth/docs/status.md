@@ -11,7 +11,7 @@ superseded by the current saga.
 
 | Piece | State |
 |---|---|
-| Cross-compiler `compiler/xcomp.fth` | Compiles `runtime.fth` from source (`XC-COMPILE-SOURCE`): comments, literals, `[']`, `IMMEDIATE`. Output is byte-identical to the April hand-listed emitters, which are gone. Self-test image runs it. |
+| Cross-compiler `compiler/xcomp.fth` | Compiles `runtime.fth` from source (`XC-COMPILE-SOURCE`): comments, literals, `[']`, `IMMEDIATE`, and since step 3 `IF ELSE THEN BEGIN UNTIL AGAIN WHILE REPEAT` (matched against the phase-3 kernel with `compiler/tests/compare-see.sh`). Output is byte-identical to the April hand-listed emitters, which are gone. Self-test image runs it. |
 | Primitive registry `core/prims.fth` | Names and labels of the 20 primitives runtime.fth uses; no asm bodies yet. |
 | Other four core tiers | Not compiled yet (saga step 003). |
 | Image boot, no UART bootstrap | Not started (saga step 004). |
@@ -22,12 +22,14 @@ superseded by the current saga.
 
 1. parser-integration-fix — done 2026-10-23 (negative-literal NUMBER bug)
 2. compile-runtime-from-source — done 2026-10-23
-3. compile-full-core
-4. prims-and-image-boot
-5. delete-bootstrap-and-rebaseline
-6. web-tab-4 (web-sw-cor24-forth)
-7. blog-brief
-8. deck-update
+3. compile-control-flow — done 2026-10-23
+4. compile-loops-and-defining-words
+5. compile-full-core
+6. prims-and-image-boot
+7. delete-bootstrap-and-rebaseline
+8. web-tab-4 (web-sw-cor24-forth)
+9. blog-brief
+10. deck-update
 
 ## Done in the archived saga (2026-04-22 to 2026-04-26)
 
@@ -36,3 +38,9 @@ emission of all runtime.fth definitions as COR24 asm, a runnable
 self-test, the symbol table and dynamic-label machinery for the
 parser, plus GH #3 words in the layered kernels (`:NONAME`, `?DUP`,
 `MIN`, `MAX`, comparisons, `RECURSE`, `ROLL`, `J`).
+
+## Found on the way (not fixed yet)
+
+- `2SWAP` and `2OVER` in `core/lowlevel.fth` (forth-in-forth, forth-on-forthish,
+  forth-from-forth, and `examples/14-fib.fth`) are wrong: `1 2 3 4 2SWAP`
+  leaves `2 1 4 3`, not `3 4 1 2`. The compiler avoids `2SWAP`.

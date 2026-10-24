@@ -1,0 +1,5 @@
+command = "forth-from-forth/compiler/tests/compare-see.sh forth-from-forth/compiler/tests/control.fth"
+timeout = 600
+preprocess = "cat"
+exit_code = 0
+desc = "cross-compiler control flow: every definition in tests/control.fth matches what the phase-3 kernel compiles (SEE form)"

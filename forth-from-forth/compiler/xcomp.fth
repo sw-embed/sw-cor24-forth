@@ -324,12 +324,19 @@ XC-LIT-STR XC-END    CONSTANT tok-end
 ;
 
 \ ---- Body buffer: 2 cells per item, ( kind value ).
-\ kind 0 = .word <label>, 1 = LIT <n>, 2 = unresolved token.
+\ kind 0 = .word <label>, 1 = LIT <n>, 2 = unresolved token,
+\ 3 = .word <n> (a branch offset). xc-body-cells counts the cells
+\ the body will occupy in the target, so branch offsets can be
+\ computed: kinds 0 and 3 take one cell, LIT two, unresolved none.
 VARIABLE xc-body
 HERE @ xc-body !  HERE @ 3000 + HERE !
 VARIABLE xc-body-end
-: XC-BODY-RESET  xc-body @ xc-body-end ! ;
+VARIABLE xc-body-cells
+: XC-BODY-RESET  xc-body @ xc-body-end !  0 xc-body-cells ! ;
+: XC-KIND-CELLS  ( kind -- n )
+  DUP 1 = IF DROP 2 EXIT THEN  2 = IF 0 EXIT THEN  1 ;
 : XC-BODY,  ( value kind -- )
+  DUP XC-KIND-CELLS xc-body-cells @ + xc-body-cells !
   xc-body-end @ !  xc-body-end @ 3 + !  xc-body-end @ 6 + xc-body-end !
 ;
 
@@ -351,6 +358,53 @@ VARIABLE xc-trace     0 xc-trace !
 : XC-TRACE-DEPTH  ( -- )
   xc-trace @ IF 59 EMIT 32 EMIT 100 EMIT 32 EMIT DEPTH N. NL THEN ;
 
+\ ---- Control flow. Lays down BRANCH / 0BRANCH and an offset cell,
+\ as core/minimal.fth's IMMEDIATE words do at runtime: offset =
+\ target - address of the offset cell, in bytes (3 per cell). The
+\ open IF/WHILE/BEGIN positions live on the data stack while the
+\ body is collected, exactly as in a running Forth:
+\   IF/ELSE/WHILE leave ( slot idx ): buffer slot + cell index of
+\   the offset cell to patch; BEGIN leaves ( idx ) of its target.
+XC-LIT-STR do_branch   CONSTANT label-branch
+XC-LIT-STR do_zbranch  CONSTANT label-zbranch
+XC-LIT-STR IF      CONSTANT tok-if
+XC-LIT-STR ELSE    CONSTANT tok-else
+XC-LIT-STR THEN    CONSTANT tok-then
+XC-LIT-STR BEGIN   CONSTANT tok-begin
+XC-LIT-STR UNTIL   CONSTANT tok-until
+XC-LIT-STR AGAIN   CONSTANT tok-again
+XC-LIT-STR WHILE   CONSTANT tok-while
+XC-LIT-STR REPEAT  CONSTANT tok-repeat
+
+: XC-HERE-CELL  ( -- idx )  xc-body-cells @ ;
+: XC-OFFSET  ( target idx -- bytes )  - DUP DUP + + ;
+: XC-PLACEHOLDER  ( -- slot idx )  xc-body-end @ XC-HERE-CELL  0 3 XC-BODY, ;
+: XC-RESOLVE-FWD  ( slot idx -- )  XC-HERE-CELL SWAP XC-OFFSET  SWAP 3 + ! ;
+: XC-BACK,  ( target-idx -- )  XC-HERE-CELL XC-OFFSET 3 XC-BODY, ;
+
+: XC-IF      label-zbranch 0 XC-BODY, XC-PLACEHOLDER ;
+: XC-THEN    XC-RESOLVE-FWD ;
+: XC-ELSE    label-branch 0 XC-BODY, XC-PLACEHOLDER >R >R XC-RESOLVE-FWD R> R> ;   \ not 2SWAP: see core lowlevel.fth
+: XC-BEGIN   XC-HERE-CELL ;
+: XC-UNTIL   label-zbranch 0 XC-BODY, XC-BACK, ;
+: XC-AGAIN   label-branch 0 XC-BODY, XC-BACK, ;
+: XC-WHILE   label-zbranch 0 XC-BODY, XC-PLACEHOLDER ROT ;
+: XC-REPEAT  label-branch 0 XC-BODY, XC-BACK, XC-RESOLVE-FWD ;
+
+\ XC-CONTROL ( ... counted -- ... flag )  compile a control word;
+\ false (token left alone) if it is not one.
+: XC-CONTROL
+  DUP tok-if     XC-SAME? IF DROP XC-IF     -1 EXIT THEN
+  DUP tok-then   XC-SAME? IF DROP XC-THEN   -1 EXIT THEN
+  DUP tok-else   XC-SAME? IF DROP XC-ELSE   -1 EXIT THEN
+  DUP tok-begin  XC-SAME? IF DROP XC-BEGIN  -1 EXIT THEN
+  DUP tok-until  XC-SAME? IF DROP XC-UNTIL  -1 EXIT THEN
+  DUP tok-again  XC-SAME? IF DROP XC-AGAIN  -1 EXIT THEN
+  DUP tok-while  XC-SAME? IF DROP XC-WHILE  -1 EXIT THEN
+  DUP tok-repeat XC-SAME? IF DROP XC-REPEAT -1 EXIT THEN
+  0
+;
+
 \ XC-COLLECT-BODY ( -- )  read tokens up to `;` into the buffer.
 : XC-COLLECT-BODY
   XC-BODY-RESET
@@ -362,7 +416,7 @@ VARIABLE xc-trace     0 xc-trace !
     DUP tok-tick XC-SAME? IF
       DROP label-lit 0 XC-BODY,  XC-READ-TOKEN XC-RESOLVE XC-BODY,
     ELSE
-      XC-RESOLVE XC-BODY,
+      XC-CONTROL 0= IF XC-RESOLVE XC-BODY, THEN
     THEN THEN THEN
   AGAIN
 ;
@@ -373,9 +427,10 @@ VARIABLE xc-trace     0 xc-trace !
   BEGIN DUP xc-body-end @ < WHILE
     DUP 3 + @  OVER @            \ addr value kind
     DUP 0= IF DROP EMIT-WORD-LABEL ELSE
-    1 = IF label-lit EMIT-WORD-LABEL EMIT-WORD-LITERAL ELSE
+    DUP 1 = IF DROP label-lit EMIT-WORD-LABEL EMIT-WORD-LITERAL ELSE
+    3 = IF EMIT-WORD-LITERAL ELSE
       59 EMIT 32 EMIT 63 EMIT 32 EMIT EMIT-COUNTED NL   \ "; ? tok"
-    THEN THEN
+    THEN THEN THEN
     6 +
   REPEAT
   DROP
