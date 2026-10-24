@@ -1,12 +1,16 @@
 \ xcomp.fth — forth-from-forth cross-compiler
 \
-\ Step 005: hardcoded emission for runtime.fth's 10 colon defs.
-\ Extends step 004a's pipeline proof to produce real COR24 asm
-\ text for the dict entries + threaded bodies.
+\ Reads target Forth source (core/*.fth) and emits COR24 assembler
+\ text: one dictionary entry per colon definition, threaded bodies
+\ resolved against the primitive registry in core/prims.fth. The
+\ driver is XC-COMPILE-SOURCE at the end of this file.
 \
 \ Runs inside the phase-3 forth-on-forthish REPL. Emits to UART;
-\ scripts/build-kernel.sh captures and writes to
-\ compiler/out/runtime-dict.s.
+\ scripts/build-kernel.sh keeps the text between the begin/end
+\ markers and writes it to compiler/out/runtime-dict.s.
+\
+\ Never write a backslash followed by n, r, t, x or 0 in this file,
+\ even in a comment: cor24-emu -u turns them into control bytes.
 \
 \ String convention: Pascal-style counted strings (length byte
 \ then chars).
@@ -103,7 +107,7 @@ STR: marker-end
   75 C, 69 C, 82 C, 78 C, 69 C, 76 C, 33 C, 33 C,
 
 \ ============================================================
-\ Primitive CFA label strings (referenced by colon-def bodies)
+\ Labels the compiler emits itself
 \ ============================================================
 
 \ "do_docol_far" — 12 chars
@@ -121,27 +125,10 @@ STR: label-lit  6 C,
   100 C, 111 C, 95 C, 108 C, 105 C, 116 C,
 
 \ ============================================================
-\ Forth-def entry labels (link chain + reference targets)
-\ ============================================================
-\ Naming convention: fff_entry_<NAME> for dict header,
-\                    fff_cfa_<NAME> for CFA start (body = PFA).
-
-\ ============================================================
-\ Additional primitive labels needed for - : ; defs
-\ ============================================================
-
-\ ============================================================
-\ Additional Forth-def labels for -, :, ;
-\ ============================================================
-\ The actual NAMES (byte values 45, 58, 59) are non-alphanumeric,
-\ so labels use spelled-out forms: MINUS, COLON, SEMI.
-
-\ ============================================================
-\ Symbol-table infrastructure (step 008 parser MVP)
+\ Symbol table: source name -> asm label
 \ ============================================================
 \ Each entry is 9 bytes: [prev:3][name-ptr:3][label-ptr:3].
-\ `name-ptr` and `label-ptr` are counted-string addresses
-\ defined via STR:.
+\ `name-ptr` and `label-ptr` are counted-string addresses.
 \ xc-symbols holds the head of the linked list (0 = empty).
 
 VARIABLE xc-symbols
@@ -189,20 +176,7 @@ VARIABLE xc-symbols
 ;
 
 \ ============================================================
-\ Target-side word NAMES (counted strings for symbol-table
-\ lookup). Separate from the emitted asm LABELS (already
-\ defined as label-* counted strings above).
-\ ============================================================
-
-\ Primitive names — what appears in .fth source.
-
-\ ============================================================
-\ Initial symbol-table population — a handful of primitives for
-\ the parser MVP test. Full set added in step 009.
-\ ============================================================
-
-\ ============================================================
-\ Dynamic label construction (step 009)
+\ Decimal digits into a label
 \ ============================================================
 \ NUM-C, ( n -- )  — write n's decimal digits as bytes at HERE.
 \ Mirrors phase-3 `.` but C,'s instead of EMITs.
@@ -223,7 +197,7 @@ VARIABLE xc-symbols
   0 DO C, LOOP
 ;
 
-\ Counter for monotonic label names (fff_c_1, fff_c_2, ...).
+\ Counter for unique labels (fff_c<n>_<NAME>, fff_e<n>_<NAME>).
 VARIABLE xc-counter
 0 xc-counter !
 
@@ -237,10 +211,8 @@ VARIABLE xc-counter
 \ Def emission helpers
 \ ============================================================
 
-\ Each EMIT-<NAME> emits one dict entry: header (link, flags_len,
-\ name bytes) + far-DOCOL prelude + threaded body + do_exit.
-\ The link argument is the counted-string for the PREVIOUS entry
-\ label, or 0 for the first.
+\ Each dict entry is: header (link, flags_len, name bytes) +
+\ far-DOCOL prelude + threaded body + do_exit.
 
 \ Emit the far-DOCOL CFA prelude bytes:
 \     .byte 125
@@ -254,16 +226,8 @@ VARIABLE xc-counter
   38  EMIT-BYTE-LITERAL
 ;
 
-\ Emit a dict header given (link-counted-or-0, name-len-chars on
-\ stack as separate items). Flexibility isn't worth the churn;
-\ instead per-def helpers inline the header bytes themselves.
-
 \ ============================================================
-\ Top-level driver
-\ ============================================================
-
-\ ============================================================
-\ Source-driven compilation (step 009)
+\ Source-reading helpers
 \ ============================================================
 \ Track the LAST emitted entry label so the next entry's link
 \ field can point at it. 0 = no previous entry.
